@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HybridLink Dashboard | Multipath Monitoring</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app" class="dashboard">
+        <header>
+            <div class="logo">HYBRIDLINK.IO</div>
+            <div class="connection-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">DISCONNECTED</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="card hero-card">
+                <div class="progress-header">
+                    <div>
+                        <p class="meter-label">Global Progress</p>
+                        <h1 id="global-progress-value" class="progress-value">0%</h1>
+                    </div>
+                    <div style="text-align: right">
+                        <p class="meter-label">Estimated Time</p>
+                        <p id="remaining-time" style="font-family: var(--font-mono); font-weight: 700;">--:--</p>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="global-progress-fill" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="card meter-card">
+                    <p class="meter-label">USB Transport Speed</p>
+                    <p class="meter-value speed-usb"><span id="usb-speed">0.0</span> <small>MB/s</small></p>
+                    <svg viewBox="0 0 100 20" style="height: 30px; margin-top: 10px;">
+                        <path id="usb-graph" d="M0 20 L20 15 L40 18 L60 5 L80 12 L100 20" fill="none" stroke="var(--accent-usb)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                </div>
+                <div class="card meter-card">
+                    <p class="meter-label">WiFi Transport Speed</p>
+                    <p class="meter-value speed-wifi"><span id="wifi-speed">0.0</span> <small>MB/s</small></p>
+                    <svg viewBox="0 0 100 20" style="height: 30px; margin-top: 10px;">
+                        <path id="wifi-graph" d="M0 20 L20 10 L40 15 L60 12 L80 18 L100 20" fill="none" stroke="var(--accent-wifi)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="card">
+                <p class="meter-label" style="margin-bottom: 1rem;">Chunk Completion State</p>
+                <div id="chunk-map" class="chunk-map">
+                    <!-- Chunks will be injected here -->
+                </div>
+            </div>
+        </main>
+
+        <aside>
+            <div class="card" style="display: flex; flex-direction: column; gap: 1rem;">
+                <p class="meter-label">Controls</p>
+                <div class="controls">
+                    <button id="start-btn" class="primary">START</button>
+                    <button id="pause-btn">PAUSE</button>
+                    <button id="resume-btn" style="display: none;">RESUME</button>
+                    <button id="cancel-btn" class="danger">CANCEL</button>
+                </div>
+            </div>
+
+            <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <p class="meter-label" style="margin-bottom: 1rem;">Transfer Queue</p>
+                <div id="queue-list" class="queue-list">
+                    <div class="queue-item">
+                        <span>system32.iso</span>
+                        <span style="color: var(--accent-usb)">ACTIVE</span>
+                    </div>
+                    <div class="queue-item" style="opacity: 0.5">
+                        <span>backup_user_v2.zip</span>
+                        <span>PENDING</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <p class="meter-label">Condition Diagnostics</p>
+                <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>Link Health</span>
+                        <span id="health-status" style="color: var(--accent-success)">STABLE</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Active Channels</span>
+                        <span id="active-channels">USB, WiFi</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <footer class="console" id="console">
+            <!-- Logs go here -->
+        </footer>
+    </div>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
