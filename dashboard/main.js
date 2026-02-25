@@ -20,11 +20,15 @@ const elements = {
     healthStatus: document.getElementById('health-status'),
     activeChannels: document.getElementById('active-channels'),
     usbGraph: document.getElementById('usb-graph'),
-    wifiGraph: document.getElementById('wifi-graph')
+    wifiGraph: document.getElementById('wifi-graph'),
+    usbBadge: document.getElementById('usb-badge'),
+    wifiBadge: document.getElementById('wifi-badge'),
+    queueCount: document.getElementById('queue-count')
 };
 
 // Initialize Chunks
 const chunks = [];
+elements.chunkMap.innerHTML = ''; // Clear placeholders
 for (let i = 0; i < CHUNK_COUNT; i++) {
     const chunk = document.createElement('div');
     chunk.className = 'chunk';
@@ -33,13 +37,20 @@ for (let i = 0; i < CHUNK_COUNT; i++) {
 }
 
 // Speed Graph History
-let usbHistory = Array(10).fill(0);
-let wifiHistory = Array(10).fill(0);
+let usbHistory = Array(20).fill(0);
+let wifiHistory = Array(20).fill(0);
 
 function updateGraph(element, history, value) {
     history.push(value);
-    history.slice(-10);
-    const points = history.map((val, i) => `${i * 10} ${20 - (val / 100 * 20)}`).join(' L');
+    if (history.length > 20) history.shift();
+
+    const step = 100 / (history.length - 1);
+    const points = history.map((val, i) => {
+        const x = i * step;
+        const y = 20 - (Math.min(val, 100) / 100 * 20);
+        return `${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' L');
+
     element.setAttribute('d', `M${points}`);
 }
 
@@ -49,38 +60,58 @@ function connect() {
     ws.onopen = () => {
         elements.statusDot.classList.add('online');
         elements.statusText.textContent = 'ONLINE';
-        log('System', 'Connected to HybridLink Engine', 'info');
+        log('SYSTEM', 'Secure connection established with HybridLink Engine', 'info');
         clearInterval(reconnectInterval);
     };
 
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        if (data.type === 'metrics') {
-            updateUI(data.payload);
-        } else if (data.type === 'log') {
-            log('Engine', data.payload.message, data.payload.level);
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'metrics') {
+                updateUI(data.payload);
+            } else if (data.type === 'log') {
+                log('ENGINE', data.payload.message, data.payload.level);
+            }
+        } catch (e) {
+            console.error('Failed to parse WS message', e);
         }
     };
 
     ws.onclose = () => {
         elements.statusDot.classList.remove('online');
         elements.statusText.textContent = 'OFFLINE';
-        log('System', 'Connection lost. Reconnecting...', 'error');
+        log('SYSTEM', 'Link interrupted. Attempting automatic recovery...', 'error');
         reconnectInterval = setInterval(connect, 3000);
+
+        // Reset speeds
+        elements.usbSpeed.textContent = '0.0';
+        elements.wifiSpeed.textContent = '0.0';
+        elements.usbBadge.classList.remove('online');
+        elements.wifiBadge.classList.remove('online');
     };
 }
 
 function updateUI(payload) {
+    // Smooth progress update
     elements.progressValue.textContent = `${payload.progress}%`;
     elements.progressFill.style.width = `${payload.progress}%`;
 
+    // Speed updates
     elements.usbSpeed.textContent = payload.usbSpeed.toFixed(1);
     elements.wifiSpeed.textContent = payload.wifiSpeed.toFixed(1);
 
+    // Badges
+    if (payload.usbSpeed > 0) elements.usbBadge.classList.add('online');
+    else elements.usbBadge.classList.remove('online');
+
+    if (payload.wifiSpeed > 0) elements.wifiBadge.classList.add('online');
+    else elements.wifiBadge.classList.remove('online');
+
+    // Graphs
     updateGraph(elements.usbGraph, usbHistory, payload.usbSpeed);
     updateGraph(elements.wifiGraph, wifiHistory, payload.wifiSpeed);
 
+    // Time
     if (payload.remainingTime > 0) {
         const mins = Math.floor(payload.remainingTime / 60);
         const secs = payload.remainingTime % 60;
@@ -91,35 +122,61 @@ function updateUI(payload) {
 
     // Update chunks
     payload.chunks.forEach((state, i) => {
-        chunks[i].className = 'chunk' + (state === 1 ? ' active' : state === 2 ? ' done' : '');
+        if (chunks[i]) {
+            const className = 'chunk' + (state === 1 ? ' active' : state === 2 ? ' done' : '');
+            if (chunks[i].className !== className) {
+                chunks[i].className = className;
+            }
+        }
     });
 
+    // Health
     elements.healthStatus.textContent = payload.health.toUpperCase();
+    elements.healthStatus.style.color = payload.health === 'stable' ? 'var(--accent-success)' : 'var(--accent-warning)';
+
     elements.activeChannels.textContent = payload.activeChannels.join(', ') || 'NONE';
 
     // Button visibility
     if (payload.status === 'paused') {
         elements.pauseBtn.style.display = 'none';
-        elements.resumeBtn.style.display = 'block';
+        elements.resumeBtn.style.display = 'flex';
     } else {
-        elements.pauseBtn.style.display = 'block';
+        elements.pauseBtn.style.display = 'flex';
         elements.resumeBtn.style.display = 'none';
     }
 }
 
 function log(source, message, level = 'info') {
-    const time = new Date().toLocaleTimeString([], { hour12: false });
+    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const entry = document.createElement('div');
-    entry.className = `log-entry`;
-    entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${level}">[${source}]</span> ${message}`;
+    entry.className = `log-entry log-${level}`;
+
+    entry.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-source">[${source}]</span>
+        <span class="log-message">${message}</span>
+    `;
+
     elements.console.insertBefore(entry, elements.console.firstChild);
+
+    // Prune logs if too many
+    if (elements.console.children.length > 50) {
+        elements.console.removeChild(elements.console.lastChild);
+    }
 }
 
 // Event Listeners
-elements.startBtn.onclick = () => ws.send(JSON.stringify({ type: 'START' }));
-elements.pauseBtn.onclick = () => ws.send(JSON.stringify({ type: 'PAUSE' }));
-elements.resumeBtn.onclick = () => ws.send(JSON.stringify({ type: 'RESUME' }));
-elements.cancelBtn.onclick = () => ws.send(JSON.stringify({ type: 'CANCEL' }));
+const sendCommand = (cmd) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: cmd }));
+    }
+};
+
+elements.startBtn.onclick = () => sendCommand('START');
+elements.pauseBtn.onclick = () => sendCommand('PAUSE');
+elements.resumeBtn.onclick = () => sendCommand('RESUME');
+elements.cancelBtn.onclick = () => sendCommand('CANCEL');
 
 // Start connection
 connect();
+

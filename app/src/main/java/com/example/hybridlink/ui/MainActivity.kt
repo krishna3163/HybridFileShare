@@ -9,9 +9,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.hybridlink.ui.screens.HomeScreen
 import com.example.hybridlink.ui.screens.SettingsScreen
 import com.example.hybridlink.ui.screens.TransferScreen
@@ -38,7 +40,13 @@ fun MainNavigation() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomeScreen(navController) }
-        composable("transfer") { TransferScreen(navController) }
+        composable(
+            "transfer/{type}",
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            TransferScreen(navController, type)
+        }
         composable("settings") { SettingsScreen(navController) }
     }
 }

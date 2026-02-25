@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,21 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div id="app" class="dashboard">
         <header>
-            <div class="logo">HYBRIDLINK.IO</div>
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i data-lucide="zap" size="20"></i>
+                </div>
+                <div class="logo">HYBRIDLINK.IO</div>
+            </div>
             <div class="connection-status">
                 <span id="status-dot" class="status-dot"></span>
                 <span id="status-text">DISCONNECTED</span>
@@ -22,39 +32,53 @@
         <main>
             <div class="card hero-card">
                 <div class="progress-header">
-                    <div>
-                        <p class="meter-label">Global Progress</p>
+                    <div class="progress-label-group">
+                        <p><i data-lucide="activity" size="16"></i> GLOBAL PROGRESS</p>
                         <h1 id="global-progress-value" class="progress-value">0%</h1>
                     </div>
                     <div style="text-align: right">
-                        <p class="meter-label">Estimated Time</p>
-                        <p id="remaining-time" style="font-family: var(--font-mono); font-weight: 700;">--:--</p>
+                        <p style="justify-content: flex-end"><i data-lucide="clock" size="16"></i> ESTIMATED TIME</p>
+                        <p id="remaining-time"
+                            style="font-family: var(--font-mono); font-weight: 700; font-size: 1.5rem; margin-top: 0.5rem;">
+                            --:--</p>
                     </div>
                 </div>
-                <div class="progress-bar-container">
+                <div class="progress-bar-stack">
                     <div id="global-progress-fill" class="progress-bar-fill"></div>
                 </div>
             </div>
 
             <div class="metrics-grid">
                 <div class="card meter-card">
-                    <p class="meter-label">USB Transport Speed</p>
+                    <div class="meter-header">
+                        <p class="meter-label"><i data-lucide="usb" size="14"></i> USB TRANSPORT</p>
+                        <span id="usb-badge" class="status-dot online" style="width: 6px; height: 6px;"></span>
+                    </div>
                     <p class="meter-value speed-usb"><span id="usb-speed">0.0</span> <small>MB/s</small></p>
-                    <svg viewBox="0 0 100 20" style="height: 30px; margin-top: 10px;">
-                        <path id="usb-graph" d="M0 20 L20 15 L40 18 L60 5 L80 12 L100 20" fill="none" stroke="var(--accent-usb)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-                    </svg>
+                    <div class="graph-container">
+                        <svg class="graph-svg" viewBox="0 0 100 20" preserveAspectRatio="none">
+                            <path id="usb-graph" d="M0 20 L100 20" fill="none" stroke="currentColor" stroke-width="2"
+                                vector-effect="non-scaling-stroke" />
+                        </svg>
+                    </div>
                 </div>
                 <div class="card meter-card">
-                    <p class="meter-label">WiFi Transport Speed</p>
+                    <div class="meter-header">
+                        <p class="meter-label"><i data-lucide="wifi" size="14"></i> WIFI TRANSPORT</p>
+                        <span id="wifi-badge" class="status-dot online" style="width: 6px; height: 6px;"></span>
+                    </div>
                     <p class="meter-value speed-wifi"><span id="wifi-speed">0.0</span> <small>MB/s</small></p>
-                    <svg viewBox="0 0 100 20" style="height: 30px; margin-top: 10px;">
-                        <path id="wifi-graph" d="M0 20 L20 10 L40 15 L60 12 L80 18 L100 20" fill="none" stroke="var(--accent-wifi)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-                    </svg>
+                    <div class="graph-container">
+                        <svg class="graph-svg" viewBox="0 0 100 20" preserveAspectRatio="none">
+                            <path id="wifi-graph" d="M0 20 L100 20" fill="none" stroke="currentColor" stroke-width="2"
+                                vector-effect="non-scaling-stroke" />
+                        </svg>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
-                <p class="meter-label" style="margin-bottom: 1rem;">Chunk Completion State</p>
+            <div class="card chunk-container">
+                <p class="meter-label"><i data-lucide="layers" size="14"></i> CHUNK COMPLETION STATE</p>
                 <div id="chunk-map" class="chunk-map">
                     <!-- Chunks will be injected here -->
                 </div>
@@ -62,49 +86,70 @@
         </main>
 
         <aside>
-            <div class="card" style="display: flex; flex-direction: column; gap: 1rem;">
-                <p class="meter-label">Controls</p>
+            <div class="card controls-card">
+                <p class="meter-label" style="margin-bottom: 1.25rem;"><i data-lucide="sliders" size="14"></i> CONTROLS
+                </p>
                 <div class="controls">
-                    <button id="start-btn" class="primary">START</button>
-                    <button id="pause-btn">PAUSE</button>
-                    <button id="resume-btn" style="display: none;">RESUME</button>
-                    <button id="cancel-btn" class="danger">CANCEL</button>
+                    <button id="start-btn" class="btn primary"><i data-lucide="play" size="16"></i> START</button>
+                    <button id="pause-btn" class="btn"><i data-lucide="pause" size="16"></i> PAUSE</button>
+                    <button id="resume-btn" class="btn" style="display: none;"><i data-lucide="play" size="16"></i>
+                        RESUME</button>
+                    <button id="cancel-btn" class="btn danger"><i data-lucide="square" size="16"></i> CANCEL</button>
                 </div>
             </div>
 
             <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <p class="meter-label" style="margin-bottom: 1rem;">Transfer Queue</p>
+                <div class="queue-header">
+                    <p class="meter-label"><i data-lucide="list" size="14"></i> TRANSFER QUEUE</p>
+                    <span id="queue-count" class="queue-status">2 FILES</span>
+                </div>
                 <div id="queue-list" class="queue-list">
                     <div class="queue-item">
-                        <span>system32.iso</span>
-                        <span style="color: var(--accent-usb)">ACTIVE</span>
+                        <div class="queue-file-info">
+                            <span class="queue-file-name">system32.iso</span>
+                            <span class="queue-status status-active">ACTIVE</span>
+                        </div>
                     </div>
                     <div class="queue-item" style="opacity: 0.5">
-                        <span>backup_user_v2.zip</span>
-                        <span>PENDING</span>
+                        <div class="queue-file-info">
+                            <span class="queue-file-name">backup_user_v2.zip</span>
+                            <span class="queue-status">PENDING</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <p class="meter-label">Condition Diagnostics</p>
-                <div style="margin-top: 0.5rem; font-size: 0.875rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                <p class="meter-label"><i data-lucide="shield-check" size="14"></i> CONDITION DIAGNOSTICS</p>
+                <div class="diag-grid">
+                    <div class="diag-item">
                         <span>Link Health</span>
-                        <span id="health-status" style="color: var(--accent-success)">STABLE</span>
+                        <span id="health-status" class="diag-value" style="color: var(--accent-success)">STABLE</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div class="diag-item">
                         <span>Active Channels</span>
-                        <span id="active-channels">USB, WiFi</span>
+                        <span id="active-channels" class="diag-value">USB, WiFi</span>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <footer class="console" id="console">
-            <!-- Logs go here -->
+        <footer class="console-card">
+            <div class="console-header">
+                <i data-lucide="terminal" size="14"></i> SYSTEM LOG CONSOLE
+            </div>
+            <div class="console-body" id="console">
+                <!-- Logs go here -->
+            </div>
         </footer>
     </div>
     <script type="module" src="./main.js"></script>
+    <script>
+        // Initialize lucide icons
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
+    </script>
 </body>
+
 </html>
