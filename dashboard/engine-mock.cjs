@@ -30,13 +30,21 @@ const sendState = (ws) => {
 
 wss.on('connection', (ws) => {
     console.log('Dashboard connected');
-    
+
+    ws.send(JSON.stringify({
+        type: 'pairing',
+        payload: {
+            pin: '741-963',
+            qr_text: 'hybridlink-pairing-token-xyz'
+        }
+    }));
+
     const interval = setInterval(() => {
         if (transferActive) {
             usbSpeed = Math.random() * 50 + 20;
             wifiSpeed = Math.random() * 30 + 10;
             progress += (usbSpeed + wifiSpeed) / 500;
-            
+
             // Randomly update chunks
             for (let i = 0; i < 5; i++) {
                 const idx = Math.floor(Math.random() * 100);
@@ -61,7 +69,7 @@ wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         const action = JSON.parse(message);
         console.log('Received action:', action);
-        
+
         switch (action.type) {
             case 'START':
                 transferActive = true;

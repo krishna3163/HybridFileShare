@@ -572,6 +572,61 @@ aside {
   color: var(--accent-error);
 }
 
+/* Pairing Card */
+.pairing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.05), rgba(168, 85, 247, 0.05));
+}
+
+.qr-container {
+  width: 160px;
+  height: 160px;
+  background: white;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #000;
+  gap: 8px;
+}
+
+.qr-placeholder p {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.pin-display {
+  text-align: center;
+}
+
+.pin-display p {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.pin-display h2 {
+  font-size: 2rem;
+  font-family: var(--font-mono);
+  color: var(--accent-usb);
+  letter-spacing: 4px;
+}
+
 /* Receiver Overlay */
 .overlay {
   position: fixed;

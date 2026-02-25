@@ -23,7 +23,9 @@ const elements = {
     wifiGraph: document.getElementById('wifi-graph'),
     usbBadge: document.getElementById('usb-badge'),
     wifiBadge: document.getElementById('wifi-badge'),
-    queueCount: document.getElementById('queue-count')
+    queueCount: document.getElementById('queue-count'),
+    pairingQR: document.getElementById('pairing-qr'),
+    displayPin: document.getElementById('display-pin')
 };
 
 // Initialize Chunks
@@ -71,6 +73,8 @@ function connect() {
                 updateUI(data.payload);
             } else if (data.type === 'log') {
                 log('ENGINE', data.payload.message, data.payload.level);
+            } else if (data.type === 'pairing') {
+                updatePairingInfo(data.payload);
             }
         } catch (e) {
             console.error('Failed to parse WS message', e);
@@ -143,6 +147,19 @@ function updateUI(payload) {
     } else {
         elements.pauseBtn.style.display = 'flex';
         elements.resumeBtn.style.display = 'none';
+    }
+}
+
+function updatePairingInfo(payload) {
+    if (payload.pin) {
+        elements.displayPin.textContent = payload.pin;
+    }
+
+    if (payload.qr_b64) {
+        elements.pairingQR.innerHTML = `<img src="data:image/png;base64,${payload.qr_b64}" style="width:100%; height:100%;">`;
+    } else if (payload.qr_text) {
+        // Fallback or debug
+        log('PAIRING', 'New pairing QR data received', 'info');
     }
 }
 
