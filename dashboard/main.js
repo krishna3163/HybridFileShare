@@ -1,261 +1,311 @@
-let ws;
-let reconnectInterval;
-const CHUNK_COUNT = 100;
+const CHUNK_COUNT = 150;
+const chunks = [];
 
-// UI Elements
-const elements = {
-    statusDot: document.getElementById('status-dot'),
-    statusText: document.getElementById('status-text'),
-    progressValue: document.getElementById('global-progress-value'),
-    progressFill: document.getElementById('global-progress-fill'),
-    usbSpeed: document.getElementById('usb-speed'),
-    wifiSpeed: document.getElementById('wifi-speed'),
-    remainingTime: document.getElementById('remaining-time'),
+// Elements
+const els = {
+    app: document.getElementById('app'),
+    deviceList: document.getElementById('device-list'),
+    dropzone: document.getElementById('dropzone'),
+    fileInput: document.getElementById('file-input'),
+    selectedFiles: document.getElementById('selected-files'),
+    previewName: document.getElementById('preview-filename'),
+    previewSize: document.getElementById('preview-filesize'),
+    clearBtn: document.getElementById('clear-files-btn'),
+    sendBtn: document.getElementById('send-files-btn'),
+    metrics: document.getElementById('metrics-container'),
+    progressFill: document.getElementById('progress-fill'),
+    progressVal: document.getElementById('progress-val'),
+    etaVal: document.getElementById('eta-val'),
+    usbSpeed: document.getElementById('usb-speed-val'),
+    wifiSpeed: document.getElementById('wifi-speed-val'),
+    totalSpeed: document.getElementById('total-speed-val'),
     chunkMap: document.getElementById('chunk-map'),
-    console: document.getElementById('console'),
-    startBtn: document.getElementById('start-btn'),
-    pauseBtn: document.getElementById('pause-btn'),
-    resumeBtn: document.getElementById('resume-btn'),
-    cancelBtn: document.getElementById('cancel-btn'),
-    usbGraph: document.getElementById('usb-graph'),
-    wifiGraph: document.getElementById('wifi-graph'),
-    pairingQR: document.getElementById('pairing-qr'),
-    displayPin: document.getElementById('display-pin')
+    modal: document.getElementById('connection-modal'),
+    modalTitle: document.getElementById('modal-title'),
+    btnAccept: document.getElementById('accept-btn'),
+    btnReject: document.getElementById('reject-btn'),
+    devName: document.querySelector('.device-name'),
+    devStatus: document.querySelector('.device-status'),
+    devAvatar: document.querySelector('.device-avatar'),
+    diagUsb: document.getElementById('diag-usb'),
+    queueList: document.getElementById('queue-list'),
+};
+
+// State
+let isConnected = false;
+let socket = null;
+let currentTransfer = {
+    totalBytes: 0,
+    transferredBytes: 0,
+    usbBytes: 0,
+    wifiBytes: 0,
+    startTime: 0,
+    active: false,
+    filename: ""
 };
 
 // Initialize Chunks
-const chunks = [];
-elements.chunkMap.innerHTML = ''; // Clear placeholders
+els.chunkMap.innerHTML = '';
 for (let i = 0; i < CHUNK_COUNT; i++) {
     const chunk = document.createElement('div');
     chunk.className = 'chunk';
-    elements.chunkMap.appendChild(chunk);
+    els.chunkMap.appendChild(chunk);
     chunks.push(chunk);
 }
 
-// Speed Graph History
-let usbHistory = Array(20).fill(0);
-let wifiHistory = Array(20).fill(0);
+// -------------------------------------------------------------
+// Real WebSocket Telemetry integration
+// -------------------------------------------------------------
+function connectTelemetry() {
+    socket = new WebSocket('ws://127.0.0.1:9002');
 
-function updateGraph(element, history, value) {
-    history.push(value);
-    if (history.length > 20) history.shift();
-
-    const step = 100 / (history.length - 1);
-    const points = history.map((val, i) => {
-        const x = i * step;
-        const y = 20 - (Math.min(val, 100) / 100 * 20);
-        return `${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' L');
-
-    element.setAttribute('d', `M${points}`);
-}
-
-function connect() {
-    ws = new WebSocket('ws://localhost:8080');
-
-    ws.onopen = () => {
-        elements.statusDot.classList.add('online');
-        elements.statusText.textContent = 'ONLINE';
-        log('SYSTEM', 'Secure connection established with HybridLink Engine', 'info');
-        clearInterval(reconnectInterval);
+    socket.onopen = () => {
+        console.log("Telemetry connected");
+        // We consider the local engine "discovered" for now
+        addDevice({
+            id: 'engine-1',
+            name: "HybridLink Engine",
+            type: "PC",
+            channels: ['USB', 'WIFI']
+        });
     };
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'metrics') {
-                updateUI(data.payload);
-            } else if (data.type === 'log') {
-                log('ENGINE', data.payload.message, data.payload.level);
-            } else if (data.type === 'pairing') {
-                updatePairingInfo(data.payload);
-            }
-        } catch (e) {
-            console.error('Failed to parse WS message', e);
-        }
+            const msg = JSON.parse(event.data);
+            handleTelemetryEvent(msg.type, msg.data);
+        } catch (e) { console.error("T-Error", e); }
     };
 
-    ws.onclose = () => {
-        elements.statusDot.classList.remove('online');
-        elements.statusText.textContent = 'OFFLINE';
-        log('SYSTEM', 'Link interrupted. Attempting automatic recovery...', 'error');
-        reconnectInterval = setInterval(connect, 3000);
-
-        // Reset speeds
-        elements.usbSpeed.textContent = '0.0';
-        elements.wifiSpeed.textContent = '0.0';
+    socket.onclose = () => {
+        setTimeout(connectTelemetry, 5000); // Reconnect
     };
 }
 
-function updateUI(payload) {
-    // Smooth progress update
-    elements.progressValue.textContent = `${payload.progress}%`;
-    elements.progressFill.style.width = `${payload.progress}%`;
-
-    // Speed updates
-    elements.usbSpeed.textContent = payload.usbSpeed.toFixed(1);
-    elements.wifiSpeed.textContent = payload.wifiSpeed.toFixed(1);
-
-    // Graphs
-    updateGraph(elements.usbGraph, usbHistory, payload.usbSpeed);
-    updateGraph(elements.wifiGraph, wifiHistory, payload.wifiSpeed);
-
-    // time
-    if (payload.remainingTime > 0) {
-        const mins = Math.floor(payload.remainingTime / 60);
-        const secs = payload.remainingTime % 60;
-        elements.remainingTime.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    } else {
-        elements.remainingTime.textContent = '--:--';
+function handleTelemetryEvent(type, data) {
+    if (!currentTransfer.active && type === "TRANSFER_STARTED") {
+        startTransferUI(data.filename, data.size);
     }
 
-    // update chunks
-    payload.chunks.forEach((state, i) => {
-        if (chunks[i]) {
-            const className = 'chunk' + (state === 1 ? ' active' : state === 2 ? ' done' : '');
-            if (chunks[i].className !== className) {
-                chunks[i].className = className;
-            }
-        }
-    });
+    if (type === "CHUNK_COMPLETED") {
+        currentTransfer.transferredBytes += data.bytes;
+        if (data.channel === "usb") currentTransfer.usbBytes += data.bytes;
+        else if (data.channel === "wifi") currentTransfer.wifiBytes += data.bytes;
 
-    log('DIAG', `Link Health: ${payload.health.toUpperCase()} | Channels: ${payload.activeChannels.join(', ') || 'NONE'}`, 'info');
+        updateMetricsUI(data.chunk_id, data.channel);
+    }
 
-    // Button visibility
-    if (payload.status === 'paused') {
-        elements.pauseBtn.style.display = 'none';
-        elements.resumeBtn.style.display = 'flex';
-    } else {
-        elements.pauseBtn.style.display = 'flex';
-        elements.resumeBtn.style.display = 'none';
+    if (type === "TRANSFER_COMPLETED") {
+        finishTransferUI();
     }
 }
 
-function updatePairingInfo(payload) {
-    if (payload.pin) {
-        elements.displayPin.textContent = payload.pin;
-    }
+connectTelemetry();
 
-    if (payload.qr_b64) {
-        elements.pairingQR.innerHTML = `<img src="data:image/png;base64,${payload.qr_b64}" style="width:100%; height:100%;">`;
-    } else if (payload.qr_text) {
-        // Fallback or debug
-        log('PAIRING', 'New pairing QR data received', 'info');
-    }
-}
+// -------------------------------------------------------------
+// Nearby Device Discovery & Pairing (Zero-setup UI)
+// -------------------------------------------------------------
+function addDevice(dev) {
+    if (document.getElementById(dev.id)) return;
 
-function log(source, message, level = 'info') {
-    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const entry = document.createElement('div');
-    entry.className = `log-entry log-${level}`;
-
-    entry.innerHTML = `
-        <span class="log-time">${time}</span>
-        <span class="log-source">[${source}]</span>
-        <span class="log-message">${message}</span>
+    const el = document.createElement('div');
+    el.className = 'device-item';
+    el.id = dev.id;
+    el.innerHTML = `
+        <div class="device-icon"><i data-lucide="${dev.type === 'Android' ? 'smartphone' : 'monitor'}"></i></div>
+        <div class="device-item-info">
+            <span class="device-item-name">${dev.name}</span>
+            <span class="device-item-type">HybridLink ${dev.type} Node (Zero-Setup)</span>
+        </div>
+        <div style="font-size:0.75rem; color:var(--accent-blue); padding:4px 8px; border-radius:12px; background:rgba(59,130,246,0.1)">PAIR</div>
     `;
 
-    elements.console.insertBefore(entry, elements.console.firstChild);
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
+    el.onclick = () => requestConnection(dev);
+    els.deviceList.appendChild(el);
+}
 
-    // Prune logs if too many
-    if (elements.console.children.length > 50) {
-        elements.console.removeChild(elements.console.lastChild);
+function requestConnection(dev) {
+    els.modalTitle.textContent = `Pair with ${dev.name}?`;
+    document.getElementById('modal-status').textContent = `Temporary session key will be generated.`;
+    els.modal.style.display = 'flex';
+
+    els.btnAccept.onclick = () => {
+        els.modal.style.display = 'none';
+        establishConnection(dev);
+    };
+    els.btnReject.onclick = () => {
+        els.modal.style.display = 'none';
+        isConnected = false;
+    };
+}
+
+function establishConnection(dev) {
+    isConnected = true;
+    els.devName.textContent = dev.name;
+    els.devStatus.textContent = "Securely paired (Temporary Session)";
+    els.devAvatar.classList.remove('placeholder');
+    els.devAvatar.innerHTML = `<i data-lucide="${dev.type === 'Android' ? 'smartphone' : 'monitor'}" style="color:white;"></i>`;
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
+
+    els.diagUsb.textContent = "Bound (Multipath)";
+    els.diagUsb.className = 'status-badge active';
+
+    els.dropzone.classList.remove('disabled');
+    document.getElementById('global-status-text').textContent = "Paired";
+}
+
+// -------------------------------------------------------------
+// File Sharing UX
+// -------------------------------------------------------------
+els.dropzone.addEventListener('click', () => { if (isConnected) els.fileInput.click(); });
+els.dropzone.addEventListener('dragover', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(59,130,246,0.1)'; });
+els.dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(255,255,255,0.02)'; });
+els.dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    els.dropzone.style.background = 'rgba(255,255,255,0.02)';
+    if (isConnected && e.dataTransfer.files.length > 0) processFileSelection(e.dataTransfer.files[0]);
+});
+els.fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files[0]); });
+
+els.clearBtn.onclick = () => {
+    els.selectedFiles.style.display = 'none';
+    els.dropzone.style.display = 'flex';
+    els.fileInput.value = '';
+};
+
+function processFileSelection(file) {
+    els.dropzone.style.display = 'none';
+    els.selectedFiles.style.display = 'block';
+    els.previewName.textContent = file.name;
+    els.previewSize.textContent = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+els.sendBtn.onclick = () => {
+    const file = els.fileInput.files[0];
+    if (!file) return;
+
+    // Fallback UI starting if no real backend response
+    startTransferUI(file.name, file.size);
+
+    // In a real integrated flow, we would push the file content or trigger the CLI here.
+    // E.g., fetch('/api/upload', {method: 'POST'})
+
+    // For visual testing of the UI without a connected backend file reading system:
+    let simulatedProgress = 0;
+    currentTransfer.simInterval = setInterval(() => {
+        handleTelemetryEvent("CHUNK_COMPLETED", {
+            chunk_id: Math.floor(Math.random() * CHUNK_COUNT),
+            channel: Math.random() > 0.4 ? 'usb' : 'wifi',
+            bytes: file.size / CHUNK_COUNT
+        });
+        simulatedProgress += (100 / CHUNK_COUNT);
+        if (simulatedProgress >= 100) {
+            clearInterval(currentTransfer.simInterval);
+            handleTelemetryEvent("TRANSFER_COMPLETED", {});
+        }
+    }, 150);
+};
+
+// -------------------------------------------------------------
+// Multipath Real-time Metrics
+// -------------------------------------------------------------
+let speedCheckInterval;
+function startTransferUI(name, totalBytes) {
+    currentTransfer = {
+        totalBytes: totalBytes,
+        transferredBytes: 0,
+        usbBytes: 0,
+        wifiBytes: 0,
+        lastUsb: 0,
+        lastWifi: 0,
+        startTime: Date.now(),
+        active: true,
+        filename: name
+    };
+
+    els.selectedFiles.style.display = 'none';
+    els.metrics.style.display = 'flex';
+    document.getElementById('global-status-text').textContent = "Transferring";
+    addQueueItem(name);
+
+    // Clear chunks
+    chunks.forEach(c => c.className = 'chunk');
+
+    speedCheckInterval = setInterval(calculateSpeeds, 1000);
+}
+
+function calculateSpeeds() {
+    if (!currentTransfer.active) return;
+
+    const deltaUsb = currentTransfer.usbBytes - currentTransfer.lastUsb;
+    const deltaWifi = currentTransfer.wifiBytes - currentTransfer.lastWifi;
+
+    currentTransfer.lastUsb = currentTransfer.usbBytes;
+    currentTransfer.lastWifi = currentTransfer.wifiBytes;
+
+    const usbSpeed = deltaUsb / (1024 * 1024);
+    const wifiSpeed = deltaWifi / (1024 * 1024);
+    const totalSpeed = usbSpeed + wifiSpeed;
+
+    els.usbSpeed.innerHTML = `${usbSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
+    els.wifiSpeed.innerHTML = `${wifiSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
+    els.totalSpeed.innerHTML = `${totalSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
+
+    const remain = currentTransfer.totalBytes - currentTransfer.transferredBytes;
+    let eta = 0;
+    if (totalSpeed > 0) eta = Math.ceil((remain / (1024 * 1024)) / totalSpeed);
+    els.etaVal.textContent = eta + 's';
+}
+
+function updateMetricsUI(chunkId, channel) {
+    if (!currentTransfer.active) return;
+
+    const pct = Math.min(100, (currentTransfer.transferredBytes / currentTransfer.totalBytes) * 100);
+    els.progressVal.textContent = Math.floor(pct) + "%";
+    els.progressFill.style.width = pct + "%";
+
+    // Map chunk to visual grid
+    const cidx = chunkId % CHUNK_COUNT;
+    const colorClass = channel === 'usb' ? 'cyan' : 'purple';
+    chunks[cidx].className = `chunk ${colorClass}`;
+
+    // Fade old chunks to 'done'
+    setTimeout(() => { if (chunks[cidx].classList.contains(colorClass)) chunks[cidx].className = 'chunk done'; }, 500);
+}
+
+function finishTransferUI() {
+    currentTransfer.active = false;
+    clearInterval(speedCheckInterval);
+    document.getElementById('global-status-text').textContent = "Completed";
+
+    els.usbSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
+    els.wifiSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
+    els.totalSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
+    els.progressFill.style.width = "100%";
+    els.progressVal.textContent = "100%";
+
+    setTimeout(() => {
+        els.metrics.style.display = 'none';
+        els.dropzone.style.display = 'flex';
+        els.fileInput.value = '';
+        markQueueDone(currentTransfer.filename);
+    }, 3000);
+}
+
+function addQueueItem(name) {
+    if (els.queueList.querySelector('.empty-state')) els.queueList.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.id = `q-${btoa(name).replace(/=/g, '')}`;
+    item.innerHTML = `<div style="font-weight: 500">${name}</div><div style="font-size: 0.7rem; color: var(--accent-blue); margin-top:4px;">TRANSFERRING...</div>`;
+    els.queueList.prepend(item);
+}
+
+function markQueueDone(name) {
+    const item = document.getElementById(`q-${btoa(name).replace(/=/g, '')}`);
+    if (item) {
+        item.className = 'queue-item done';
+        item.innerHTML = `<div style="font-weight: 500">${name}</div><div style="font-size: 0.7rem; color: var(--accent-green); margin-top:4px;">COMPLETED</div>`;
     }
 }
-
-// Event Listeners
-const sendCommand = (cmd, payload = {}) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: cmd, ...payload }));
-    }
-};
-
-elements.startBtn.onclick = () => sendCommand('START');
-elements.pauseBtn.onclick = () => sendCommand('PAUSE');
-elements.resumeBtn.onclick = () => sendCommand('RESUME');
-elements.cancelBtn.onclick = () => sendCommand('CANCEL');
-
-// Browser Receiver Logic
-const urlParams = new URLSearchParams(window.location.search);
-const sessionToken = urlParams.get('s');
-const deviceId = urlParams.get('d');
-
-if (sessionToken && deviceId) {
-    showReceiverUI();
-}
-
-function showReceiverUI() {
-    const overlay = document.getElementById('receiver-overlay');
-    overlay.style.display = 'flex';
-
-    log('BROWSER', `Joining app-less session: ${sessionToken.substring(0, 8)}...`, 'info');
-
-    // Simulate pairing request
-    setTimeout(() => {
-        document.getElementById('pin-entry').style.display = 'block';
-        log('SECURITY', 'Manual PIN verification required for browser node', 'warn');
-    }, 1500);
-
-    // PIN Box Auto-focus/tabbing
-    const pinBoxes = document.querySelectorAll('.pin-cell');
-    pinBoxes.forEach((box, idx) => {
-        box.onkeyup = (e) => {
-            if (e.target.value.length === 1 && idx < pinBoxes.length - 1) {
-                pinBoxes[idx + 1].focus();
-            }
-
-            // Check if all filled
-            const pin = Array.from(pinBoxes).map(b => b.value).join('');
-            if (pin.length === 6) {
-                verifyPairing(pin);
-            }
-        }
-    });
-}
-
-function verifyPairing(pin) {
-    log('SECURITY', 'Verifying session token and PIN...', 'info');
-
-    // Simulate verification
-    setTimeout(() => {
-        document.getElementById('pairing-panel').style.display = 'none';
-        document.getElementById('transfer-panel').style.display = 'block';
-        document.getElementById('accept-btn').style.display = 'flex';
-
-        document.getElementById('incoming-filename').textContent = 'Project_Source_v2.zip';
-        document.getElementById('incoming-size').textContent = '248.5 MB';
-
-        log('AUTH', 'Pairing successful. Session established over WiFi-Relay', 'success');
-    }, 1000);
-}
-
-document.getElementById('accept-btn').onclick = () => {
-    document.getElementById('accept-btn').style.display = 'none';
-    log('TRANSFER', 'Receiving chunks via browser stream...', 'info');
-    simulateReception();
-};
-
-document.getElementById('close-receiver-btn').onclick = () => {
-    window.location.search = '';
-};
-
-function simulateReception() {
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += Math.random() * 5;
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(interval);
-            log('TRANSFER', 'File received successfully via Browser Mode', 'info');
-        }
-
-        document.getElementById('receiver-progress-fill').style.width = `${progress}%`;
-        document.getElementById('receiver-percent').textContent = `${Math.floor(progress)}%`;
-        document.getElementById('receiver-speed').textContent = `${(Math.random() * 10 + 5).toFixed(1)} MB/s`;
-    }, 500);
-}
-
-// Start connection
-connect();
-

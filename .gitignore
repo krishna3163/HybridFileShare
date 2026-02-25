@@ -20,3 +20,4 @@ obj/
 *.msi
 *.apk
 target/
+HybridFileXfer-main/

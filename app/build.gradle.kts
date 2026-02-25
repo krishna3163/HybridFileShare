@@ -95,4 +95,7 @@ dependencies {
 
     // Navigation
     implementation(libs.navigation.compose)
+
+    // QR Code Generation
+    implementation("com.google.zxing:core:3.5.2")
 }

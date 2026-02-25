@@ -8,17 +8,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
 import java.io.File
+import com.example.hybridlink.util.BatteryObserver
+import javax.inject.Inject
 
-class TransferEngine(
+class TransferEngine @Inject constructor(
     private val context: Context,
     private val usbTransport: UsbTransport,
     private val wifiTransport: WifiTransport,
     private val bluetoothTransport: BluetoothTransport,
     private val chunkManager: ChunkManager,
     private val scheduler: MultiChannelScheduler,
-    private val batteryObserver: BatteryObserver,
-    private val discoveryManager: DiscoveryManager
+    private val batteryObserver: BatteryObserver
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var transferJob: Job? = null
@@ -59,8 +61,6 @@ class TransferEngine(
             launch { wifiTransport.startServer() }
             launch { bluetoothTransport.startServer() }
             
-            launch { discoveryManager.startBroadcasting("Pixel 7 Pro", 9000) }
-            
             scheduler.startAdaptiveScheduling(this)
             
             // Real-time failure monitoring and fallback is already integrated 
@@ -75,8 +75,6 @@ class TransferEngine(
 
     fun cancelTransfer() {
         transferJob?.cancel()
-        usbTransport.stopServer()
-        wifiTransport.stopServer()
         _status.value = "Idle"
         _progress.value = 0f
     }

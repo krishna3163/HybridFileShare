@@ -14,6 +14,10 @@ class ChunkManager(
         return emptyList()
     }
 
+    fun getPendingChunks(): List<Chunk> {
+        return emptyList()
+    }
+
     fun getChunk(chunkId: Int): Chunk? {
         // TODO: Implement chunk retrieval logic
         return null

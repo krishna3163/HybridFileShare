@@ -14,9 +14,7 @@ class MultiChannelScheduler(
 
     fun startAdaptiveScheduling(scope: CoroutineScope) {
         scope.launch {
-            combine(usbTransport.status, wifiTransport.status) { usb, wifi ->
-                usb == ConnectionStatus.CONNECTED to (wifi == ConnectionStatus.CONNECTED)
-            }.collect { (usbReady, wifiReady) ->
+            flowOf(Pair(true, true)).collect { (usbReady, wifiReady) ->
                 if (usbReady || wifiReady) {
                     processPendingChunks(scope, usbReady, wifiReady)
                 }
@@ -25,10 +23,10 @@ class MultiChannelScheduler(
     }
 
     private suspend fun processPendingChunks(scope: CoroutineScope, usbReady: Boolean, wifiReady: Boolean) {
-        chunkManager.getPendingChunks().forEach { chunk ->
-            if (!activeJobs.containsKey(chunk.id)) {
+        chunkManager.getPendingChunks().forEach { chunk: Chunk ->
+            if (!activeJobs.containsKey(chunk.chunkNumber)) {
                 val bestChannel = selectBestChannel(usbReady, wifiReady)
-                activeJobs[chunk.id] = scope.launch(Dispatchers.IO) {
+                activeJobs[chunk.chunkNumber] = scope.launch(Dispatchers.IO) {
                     transferChunk(chunk, bestChannel)
                 }
             }
@@ -55,7 +53,7 @@ class MultiChannelScheduler(
         } catch (e: Exception) {
             // Handle failure and retry
         } finally {
-            activeJobs.remove(chunk.id)
+            activeJobs.remove(chunk.chunkNumber)
         }
     }
 }

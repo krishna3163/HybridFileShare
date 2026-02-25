@@ -4,160 +4,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HybridLink | Mission Control</title>
+    <title>HybridLink UI</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="icon" type="image/png" href="/logo.png">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
-    <div class="bg-grid"></div>
-
-    <div id="app" class="dashboard">
-        <header>
-            <div class="logo-container">
-                <div class="logo-icon">
-                    <img src="/logo.png" alt="HybridLink Logo" style="width: 28px; height: 28px; object-fit: contain;">
+    <div id="app" class="dashboard-container">
+        <!-- Sidebar Panel -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon"><img src="/logo.png" style="width:20px; filter: brightness(0) invert(1);" />
                 </div>
-                <div class="logo">HYBRIDLINK</div>
-            </div>
-            <div class="connection-status">
-                <span id="status-dot" class="status-dot"></span>
-                <span id="status-text">OFFLINE</span>
-            </div>
-        </header>
-
-        <main>
-            <div class="premium-card hero-card">
-                <div class="progress-header">
-                    <div>
-                        <span class="label-mini">GLOBAL DATA INTEGRITY</span>
-                        <h1 id="global-progress-value" class="progress-value">0%</h1>
-                    </div>
-                    <div class="eta">
-                        <span class="label-mini">ESTIMATED COMPLETION</span>
-                        <h3 id="remaining-time">--:--</h3>
-                    </div>
-                </div>
-                <div class="bar-container">
-                    <div id="global-progress-fill" class="bar-fill"></div>
-                </div>
+                HybridLink
             </div>
 
-            <div class="metrics-grid">
-                <div class="premium-card meter-card">
-                    <span class="label-mini">USB 3.2 GEN X</span>
-                    <h2 class="speed-cyan">
-                        <span id="usb-speed">0.0</span><span class="unit">MB/S</span>
-                    </h2>
-                    <div class="graph-box">
-                        <svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none">
-                            <path id="usb-graph" d="M0 20 L100 20" fill="none" stroke="var(--cyan)" stroke-width="2"
-                                vector-effect="non-scaling-stroke" />
-                        </svg>
-                    </div>
+            <div class="panel nearby-panel">
+                <div class="panel-header">
+                    <h3>Nearby Devices</h3>
+                    <div class="radar-ping"></div>
                 </div>
+                <div id="device-list" class="device-list">
+                    <!-- Devices populated dynamically -->
+                </div>
+                <button id="manual-connect-btn" class="btn outline full-width" style="margin-top: 1rem;">
+                    <i data-lucide="plus" size="16"></i> Manual IP Connect
+                </button>
+            </div>
 
-                <div class="premium-card meter-card">
-                    <span class="label-mini">WIFI 6E MESH</span>
-                    <h2 class="speed-purple">
-                        <span id="wifi-speed">0.0</span><span class="unit">MB/S</span>
-                    </h2>
-                    <div class="graph-box">
-                        <svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none">
-                            <path id="wifi-graph" d="M0 20 L100 20" fill="none" stroke="var(--purple)" stroke-width="2"
-                                vector-effect="non-scaling-stroke" />
-                        </svg>
-                    </div>
+            <div class="panel diagnostics-panel">
+                <h3>Diagnostics</h3>
+                <div class="diag-item">
+                    <span><i data-lucide="usb" size="14"></i> USB Channel</span>
+                    <span id="diag-usb" class="status-badge disconnected">Disconnected</span>
+                </div>
+                <div class="diag-item">
+                    <span><i data-lucide="wifi" size="14"></i> WiFi Channel</span>
+                    <span id="diag-wifi" class="status-badge connected">Ready (12ms)</span>
+                </div>
+                <div class="diag-item">
+                    <span><i data-lucide="cpu" size="14"></i> Scheduler</span>
+                    <span id="diag-scheduler" class="status-badge active">Active</span>
                 </div>
             </div>
 
-            <div class="premium-card chunk-explorer">
-                <span class="label-mini">BIT-STREAM FRAGMENTATION</span>
-                <div id="chunk-map" class="chunk-grid">
-                    <!-- Dynamic Chunks -->
+            <div class="panel queue-panel">
+                <h3>Transfer Queue</h3>
+                <div id="queue-list" class="queue-list">
+                    <!-- Queue items -->
+                    <div class="empty-state">No active transfers</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="connected-device-info" id="connected-device-info">
+                    <div class="device-avatar placeholder"><i data-lucide="monitor" size="20"></i></div>
+                    <div class="device-details">
+                        <span class="device-name">No device connected</span>
+                        <span class="device-status">Waiting for connection...</span>
+                    </div>
+                </div>
+                <div class="transfer-status">
+                    <span id="global-status-text">Ready</span>
+                    <span id="global-dot" class="dot"></span>
+                </div>
+            </header>
+
+            <div class="transfer-dashboard">
+                <!-- Dropzone for files -->
+                <div id="dropzone" class="dropzone disabled">
+                    <div class="dropzone-content">
+                        <i data-lucide="upload-cloud" size="48"></i>
+                        <h3>Drag & Drop files to send</h3>
+                        <p>or click to browse</p>
+                    </div>
+                    <input type="file" id="file-input" multiple />
+                </div>
+
+                <div id="selected-files" class="selected-files" style="display: none;">
+                    <div class="file-info-preview">
+                        <i data-lucide="file" size="24"></i>
+                        <div style="flex:1">
+                            <div id="preview-filename" style="font-weight: 500;"></div>
+                            <div id="preview-filesize" style="font-size: 0.8rem; color: var(--text-muted)"></div>
+                        </div>
+                        <button id="send-files-btn" class="btn primary"><i data-lucide="send" size="16"></i>
+                            Send</button>
+                        <button id="clear-files-btn" class="btn outline icon-only"><i data-lucide="x"
+                                size="16"></i></button>
+                    </div>
+                </div>
+
+                <!-- Real-time Dashboard (Hidden until transfer) -->
+                <div id="metrics-container" class="transfer-metrics" style="display: none;">
+                    <div class="metric-card hero">
+                        <div class="progress-header">
+                            <h4>Overall Progress</h4>
+                            <div class="time-remaining">ETA: <span id="eta-val">--:--</span></div>
+                        </div>
+                        <h1 id="progress-val">0%</h1>
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="multi-metric">
+                        <div class="metric-card metric-small">
+                            <h4><i data-lucide="usb" size="14"></i> USB Channel</h4>
+                            <h2 id="usb-speed-val" class="text-blue font-mono">0.0 <span class="unit">MB/s</span></h2>
+                        </div>
+                        <div class="metric-card metric-small">
+                            <h4><i data-lucide="wifi" size="14"></i> WiFi Channel</h4>
+                            <h2 id="wifi-speed-val" class="text-green font-mono">0.0 <span class="unit">MB/s</span></h2>
+                        </div>
+                        <div class="metric-card metric-small">
+                            <h4>Combined Speed</h4>
+                            <h2 id="total-speed-val" class="text-purple font-mono">0.0 <span class="unit">MB/s</span>
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="chunk-panel">
+                        <h4>Chunk Transport Map <span
+                                style="font-size: 0.7rem; font-weight: normal; margin-left:10px; color: var(--text-muted)">Visualizing
+                                1MB multi-path chunks</span></h4>
+                        <div id="chunk-map" class="chunk-grid"></div>
+                    </div>
                 </div>
             </div>
         </main>
 
-        <aside>
-            <div class="premium-card">
-                <span class="sidebar-label"><i data-lucide="terminal" size="14"></i> COMMAND CENTER</span>
-                <div class="btn-group">
-                    <button id="start-btn" class="p-btn action"><i data-lucide="play" size="16"></i> INITIALIZE</button>
-                    <button id="pause-btn" class="p-btn"><i data-lucide="pause" size="16"></i> INTERRUPT</button>
-                    <button id="resume-btn" class="p-btn" style="display:none"><i data-lucide="rotate-ccw"
-                            size="16"></i> RESUME</button>
-                    <button id="cancel-btn" class="p-btn danger"><i data-lucide="square" size="16"></i>
-                        TERMINATE</button>
+        <!-- Connection Request Modal -->
+        <div id="connection-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar" id="modal-avatar">
+                    <i data-lucide="smartphone" size="32"></i>
                 </div>
-            </div>
+                <h2 id="modal-title">Connection Request</h2>
+                <p id="modal-desc" style="color: var(--text-muted); margin-bottom: 2rem;">Device is requesting to pair
+                    via HybridLink.</p>
 
-            <div class="premium-card" style="flex:1">
-                <span class="sidebar-label"><i data-lucide="list" size="14"></i> ACTIVE TRANSFER QUEUE</span>
-                <div id="queue-list" class="queue-list">
-                    <div class="q-item">
-                        <span style="font-weight:600">payload_encrypted.bin</span>
-                        <span class="label-mini" style="color:var(--cyan)">ACTIVE</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="premium-card pairing-card">
-                <span class="sidebar-label"><i data-lucide="scan" size="14"></i> SECURE HANDSHAKE</span>
-                <div class="qr-box">
-                    <div id="pairing-qr"
-                        style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#000">
-                        <img src="/logo.png" width="40" alt="Logo">
-                    </div>
-                </div>
-                <div class="pin-text" id="display-pin">------</div>
-            </div>
-        </aside>
-
-        <footer class="console-card">
-            <div class="console-header">SYSTEM LOG ANALYTICS // VERBOSE</div>
-            <div id="console" class="log-stream">
-                <!-- Log Stream -->
-            </div>
-        </footer>
-
-        <!-- Browser Receiver Flow Overlay -->
-        <div id="receiver-overlay" class="overlay" style="display:none">
-            <div class="overlay-card">
-                <div style="display:flex; justify-content:center; margin-bottom:1.5rem">
-                    <img src="/logo.png" width="60" alt="Logo">
-                </div>
-                <span class="label-mini" style="margin-bottom:2rem">INCOMING SECURE HANDSHAKE</span>
-
-                <div id="pairing-panel">
-                    <p style="color:var(--text-muted); margin-bottom:1.5rem">Awaiting sender authorization...</p>
-                    <div id="pin-entry" style="display:none">
-                        <div class="pin-input-group">
-                            <input type="text" maxlength="1" class="pin-cell">
-                            <input type="text" maxlength="1" class="pin-cell">
-                            <input type="text" maxlength="1" class="pin-cell">
-                            <input type="text" maxlength="1" class="pin-cell">
-                            <input type="text" maxlength="1" class="pin-cell">
-                            <input type="text" maxlength="1" class="pin-cell">
-                        </div>
-                    </div>
+                <div class="channel-availability">
+                    <div class="channel-chip blue"><i data-lucide="usb" size="14"></i> USB Available</div>
+                    <div class="channel-chip green"><i data-lucide="wifi" size="14"></i> WiFi Available</div>
                 </div>
 
-                <div id="transfer-panel" style="display:none">
-                    <h2 id="incoming-filename" style="font-family:var(--font-sync); margin-bottom:1rem">FILE_NAME</h2>
-                    <div class="bar-container" style="margin-bottom:1rem">
-                        <div id="receiver-progress-fill" class="bar-fill"></div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between">
-                        <span id="receiver-percent" class="label-mini">0%</span>
-                        <span id="receiver-speed" class="label-mini">0.0 MB/S</span>
-                    </div>
-                </div>
-
-                <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center">
-                    <button id="accept-btn" class="p-btn action" style="display:none">BRIDGE CONNECTION</button>
-                    <button id="close-receiver-btn" class="p-btn">DISMISS</button>
+                <div style="display:flex; gap: 1rem; margin-top: 2rem;">
+                    <button id="reject-btn" class="btn outline full-width">Reject</button>
+                    <button id="accept-btn" class="btn primary full-width">Accept</button>
                 </div>
             </div>
         </div>

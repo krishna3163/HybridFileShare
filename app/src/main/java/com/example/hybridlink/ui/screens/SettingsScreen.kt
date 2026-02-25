@@ -57,7 +57,7 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 color = HybridSurface,
                 shape = RoundedCornerShape(24.dp),
-                border = AssistChipDefaults.assistChipBorder(borderColor = Color.White.copy(0.05f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.05f))
             ) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     SettingInput(
@@ -122,11 +122,13 @@ private fun SettingInput(label: String, value: String, placeholder: String) {
             value = value,
             onValueChange = {},
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = HybridSecondary,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = HybridSecondary,
+                unfocusedContainerColor = HybridSecondary,
                 focusedIndicatorColor = HybridCyan,
                 unfocusedIndicatorColor = Color.Transparent,
-                textColor = TextPrimary
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
             ),
             shape = RoundedCornerShape(12.dp)
         )

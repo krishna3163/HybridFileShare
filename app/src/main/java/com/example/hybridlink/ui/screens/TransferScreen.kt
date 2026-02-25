@@ -59,7 +59,7 @@ fun TransferScreen(navController: NavController, type: String) {
                 modifier = Modifier.fillMaxWidth(),
                 color = HybridSurface,
                 shape = RoundedCornerShape(24.dp),
-                border = AssistChipDefaults.assistChipBorder(borderColor = Color.White.copy(0.05f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.05f))
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
@@ -161,7 +161,7 @@ fun TransferScreen(navController: NavController, type: String) {
                         .height(64.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AccentError.copy(0.1f)),
-                    border = AssistChipDefaults.assistChipBorder(borderColor = AccentError.copy(0.2f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentError.copy(0.2f))
                 ) {
                     Text("CANCEL", color = AccentError, fontWeight = FontWeight.Bold)
                 }
@@ -176,7 +176,7 @@ private fun SpeedCard(label: String, speed: String, color: Color, modifier: Modi
         modifier = modifier,
         color = HybridSurface,
         shape = RoundedCornerShape(20.dp),
-        border = AssistChipDefaults.assistChipBorder(borderColor = color.copy(0.1f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
@@ -194,6 +194,31 @@ private fun SpeedCard(label: String, speed: String, color: Color, modifier: Modi
                     color = TextDim,
                     modifier = Modifier.padding(bottom = 4.dp, start = 2.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun SchedulingMetricsCard(parallelism: Int, health: Float) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = HybridSurface,
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.05f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("SCHEDULER HEALTH", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text("${(health * 100).toInt()}%", color = HybridCyan, fontWeight = FontWeight.Bold)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("PARALLEL THREADS", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text("$parallelism ACTIVE", color = HybridSecondary, fontWeight = FontWeight.Bold)
             }
         }
     }

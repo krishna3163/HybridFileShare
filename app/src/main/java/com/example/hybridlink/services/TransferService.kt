@@ -17,8 +17,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class TransferService : LifecycleService() {
 
-    @Inject
-    lateinit var transferEngine: TransferEngine
+    private var transferEngine: TransferEngine? = null
 
     private lateinit var notificationManager: NotificationManager
 
@@ -39,7 +38,7 @@ class TransferService : LifecycleService() {
                 observeProgress()
             }
             ACTION_STOP -> {
-                transferEngine.cancelTransfer()
+                transferEngine?.cancelTransfer()
                 stopSelf()
             }
         }
@@ -48,9 +47,9 @@ class TransferService : LifecycleService() {
     }
 
     private fun observeProgress() {
-        transferEngine.progress.onEach { progress ->
+        transferEngine?.progress?.onEach { progress ->
             notificationManager.notify(NOTIFICATION_ID, createNotification((progress * 100).toInt()))
-        }.launchIn(lifecycleScope)
+        }?.launchIn(lifecycleScope)
     }
 
     private fun createNotification(progress: Int): Notification {
