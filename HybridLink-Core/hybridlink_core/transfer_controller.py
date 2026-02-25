@@ -17,6 +17,7 @@ from hybridlink_core.usb_transport import UsbTransport, TransportConfig
 from hybridlink_core.wifi_transport import WifiTransport
 from hybridlink_core.chunk_assembler import ChunkAssembler
 from hybridlink_core.integrity_verifier import IntegrityVerifier
+from hybridlink_core.security_manager import SecurityManager
 from hybridlink_core.progress_reporter import ProgressReporter
 from hybridlink_core.config import TransferMode, TransferState, METADATA_FILE
 from pathlib import Path
@@ -53,6 +54,7 @@ class TransferController:
         self.scheduler: Optional[MultiChannelScheduler] = None
         self.progress_reporter: Optional[ProgressReporter] = None
         self.chunk_assembler: Optional[ChunkAssembler] = None
+        self.security_manager = SecurityManager()
 
         # Transfer metadata
         self.metadata: Optional[TransferMetadata] = None

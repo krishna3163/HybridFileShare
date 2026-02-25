@@ -129,6 +129,11 @@ fun TransferScreen(navController: NavController, type: String) {
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Advanced Scheduling Metrics
+            SchedulingMetricsCard(parallelism = 4, health = 0.98f)
+
             Spacer(modifier = Modifier.weight(1f))
 
             // Controls

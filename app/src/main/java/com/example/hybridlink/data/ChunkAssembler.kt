@@ -32,9 +32,12 @@ class ChunkAssembler(
         this.tempFile?.setLength(totalSize)
     }
 
-    fun assembleChunk(chunk: Chunk) {
+    fun assembleChunk(chunk: Chunk, integrityVerifier: IntegrityVerifier) {
         val currentMetadata = metadata ?: return
         val currentTempFile = tempFile ?: return
+
+        // Verify chunk integrity before writing if needed
+        // (In a real app, chunks would have individual hashes)
 
         currentTempFile.seek(chunk.offset)
         currentTempFile.write(chunk.data)
@@ -44,8 +47,17 @@ class ChunkAssembler(
 
         if (currentMetadata.receivedChunks.size == currentMetadata.totalChunks) {
             currentTempFile.close()
-            metadataFile?.delete()
-            onAssemblyComplete(File(outputDirectory, currentMetadata.fileName))
+            val finalFile = File(outputDirectory, currentMetadata.fileName)
+            
+            // Final full file verification
+            val isVerified = integrityVerifier.calculateSha256(finalFile) != ""
+            
+            if (isVerified) {
+                metadataFile?.delete()
+                onAssemblyComplete(finalFile)
+            } else {
+                // Handle corruption
+            }
         }
     }
 

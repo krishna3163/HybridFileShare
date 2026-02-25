@@ -5,10 +5,10 @@ ChannelManager: Manages USB and WiFi channels, detects availability, and measure
 import logging
 import asyncio
 import time
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from dataclasses import dataclass, field
 
-from hybridlink_core.usb_transport import TransportBase
+from hybridlink_core.transport import TransportPlugin
 from hybridlink_core.models import ChannelStats
 from hybridlink_core.config import ChannelType, SPEED_SAMPLE_INTERVAL, SPEED_SAMPLE_SIZE
 
@@ -42,32 +42,26 @@ class ChannelMetrics:
 
 class ChannelManager:
     """
-    Manages multiple transport channels (USB and WiFi).
-    
-    Responsibilities:
-    - Monitor channel availability
-    - Measure per-channel throughput
-    - Track channel statistics
-    - Provide channel selection based on performance
+    Advanced ChannelManager with Mesh and Plugin support.
     """
 
     def __init__(self):
-        """Initialize ChannelManager."""
-        self.channels: Dict[str, TransportBase] = {}
+        self.channels: Dict[str, TransportPlugin] = {}
+        self.peers: Dict[str, Dict[str, Any]] = {} # Discovery cache for mesh
         self.metrics: Dict[str, ChannelMetrics] = {}
         self._speed_update_tasks: Dict[str, asyncio.Task] = {}
 
-    def register_channel(self, channel_type: str, transport: TransportBase) -> None:
-        """
-        Register a transport channel.
-        
-        Args:
-            channel_type: Type of channel (e.g., USB, WIFI)
-            transport: Transport instance
-        """
-        self.channels[channel_type] = transport
-        self.metrics[channel_type] = ChannelMetrics(channel_type=channel_type)
-        logger.info(f"Registered channel: {channel_type}")
+    def register_transport(self, plugin: TransportPlugin):
+        """Register a transport plugin (USB, WiFi, WebRTC, Relay)."""
+        self.channels[plugin.name] = plugin
+        self.metrics[plugin.name] = ChannelMetrics(channel_type=plugin.name)
+        logger.info(f"Plugin registered: {plugin.name}")
+
+    async def discover_mesh_peers(self):
+        """Mock implementation of mesh peer discovery."""
+        logger.info("Scanning for HybridLink mesh peers...")
+        # In a real app, this would use mDNS/Zeroconf
+        self.peers["remote-device-01"] = {"ip": "192.168.1.100", "transports": ["wifi", "webrtc"]}
 
     async def connect_channel(self, channel_type: str) -> bool:
         """
