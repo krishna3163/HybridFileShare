@@ -142,7 +142,86 @@ fun HomeScreen(navController: NavController) {
                     )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Nearby Devices Radar
+            NearbyDevicesRadar()
         }
+    }
+}
+
+@Composable
+fun NearbyDevicesRadar() {
+    Column {
+        Text(
+            "NEARBY DEVICES",
+            style = MaterialTheme.typography.labelMedium,
+            color = TextSecondary,
+            letterSpacing = 2.sp
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Mock Discovered Devices
+        DeviceDiscoveryCard(name = "Windows Station", transports = listOf("WiFi", "BT", "USB"), os = "Windows 11")
+        Spacer(modifier = Modifier.height(12.dp))
+        DeviceDiscoveryCard(name = "Office Mac", transports = listOf("WiFi", "BT"), os = "macOS")
+    }
+}
+
+@Composable
+fun DeviceDiscoveryCard(name: String, transports: List<String>, os: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = HybridSurface,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Color.White.copy(0.05f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(HybridDark, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Computer,
+                    contentDescription = null,
+                    tint = HybridCyan,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(os, style = MaterialTheme.typography.labelSmall, color = TextDim)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                transports.forEach { transport ->
+                    TransportBadge(transport)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TransportBadge(label: String) {
+    Surface(
+        color = HybridCyan.copy(0.1f),
+        shape = RoundedCornerShape(6.dp),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = HybridCyan,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
     }
 }
 

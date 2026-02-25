@@ -9,6 +9,7 @@ from typing import Dict, Optional, List, Any
 from dataclasses import dataclass, field
 
 from hybridlink_core.transport import TransportPlugin
+from hybridlink_core.discovery_manager import DiscoveryManager, PeerDevice
 from hybridlink_core.models import ChannelStats
 from hybridlink_core.config import ChannelType, SPEED_SAMPLE_INTERVAL, SPEED_SAMPLE_SIZE
 
@@ -45,11 +46,19 @@ class ChannelManager:
     Advanced ChannelManager with Mesh and Plugin support.
     """
 
-    def __init__(self):
+    def __init__(self, device_id: str, device_name: str):
         self.channels: Dict[str, TransportPlugin] = {}
-        self.peers: Dict[str, Dict[str, Any]] = {} # Discovery cache for mesh
+        self.peers: Dict[str, Dict[str, Any]] = {}
         self.metrics: Dict[str, ChannelMetrics] = {}
         self._speed_update_tasks: Dict[str, asyncio.Task] = {}
+        self.discovery = DiscoveryManager(device_id, device_name)
+
+    async def start_discovery(self):
+        """Start both scanning and broadcasting."""
+        await asyncio.gather(
+            self.discovery.start_broadcasting(),
+            self.discovery.start_scanning()
+        )
 
     def register_transport(self, plugin: TransportPlugin):
         """Register a transport plugin (USB, WiFi, WebRTC, Relay)."""

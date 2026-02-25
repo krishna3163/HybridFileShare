@@ -14,9 +14,11 @@ class TransferEngine(
     private val context: Context,
     private val usbTransport: UsbTransport,
     private val wifiTransport: WifiTransport,
+    private val bluetoothTransport: BluetoothTransport,
     private val chunkManager: ChunkManager,
     private val scheduler: MultiChannelScheduler,
-    private val batteryObserver: BatteryObserver
+    private val batteryObserver: BatteryObserver,
+    private val discoveryManager: DiscoveryManager
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var transferJob: Job? = null
@@ -55,6 +57,9 @@ class TransferEngine(
             
             launch { usbTransport.startServer() }
             launch { wifiTransport.startServer() }
+            launch { bluetoothTransport.startServer() }
+            
+            launch { discoveryManager.startBroadcasting("Pixel 7 Pro", 9000) }
             
             scheduler.startAdaptiveScheduling(this)
             

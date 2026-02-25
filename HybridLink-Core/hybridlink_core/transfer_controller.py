@@ -18,6 +18,8 @@ from hybridlink_core.wifi_transport import WifiTransport
 from hybridlink_core.chunk_assembler import ChunkAssembler
 from hybridlink_core.integrity_verifier import IntegrityVerifier
 from hybridlink_core.security_manager import SecurityManager
+from hybridlink_core.pairing_manager import PairingManager
+from hybridlink_core.bluetooth_transport import BluetoothTransport
 from hybridlink_core.progress_reporter import ProgressReporter
 from hybridlink_core.config import TransferMode, TransferState, METADATA_FILE
 from pathlib import Path
@@ -55,6 +57,7 @@ class TransferController:
         self.progress_reporter: Optional[ProgressReporter] = None
         self.chunk_assembler: Optional[ChunkAssembler] = None
         self.security_manager = SecurityManager()
+        self.pairing_manager = PairingManager()
 
         # Transfer metadata
         self.metadata: Optional[TransferMetadata] = None
@@ -104,8 +107,8 @@ class TransferController:
             self.chunk_manager = ChunkManager(self.config.chunk_size)
             self.chunk_manager.initialize_file(file_path, transfer_id)
 
-            # Initialize ChannelManager with transports
-            self.channel_manager = ChannelManager()
+            # Initialize ChannelManager with device metadata
+            self.channel_manager = ChannelManager(transfer_id or "HL-PC-MAIN", "PC-MISSION-CONTROL")
 
             if self.config.usb_enabled:
                 usb_transport = UsbTransport(
@@ -113,7 +116,7 @@ class TransferController:
                     port=self.config.usb_port,
                     config=TransportConfig(timeout=self.config.channel_timeout),
                 )
-                self.channel_manager.register_channel("usb", usb_transport)
+                self.channel_manager.register_transport(usb_transport)
 
             if self.config.wifi_enabled:
                 wifi_transport = WifiTransport(
@@ -121,7 +124,11 @@ class TransferController:
                     port=self.config.wifi_port,
                     config=TransportConfig(timeout=self.config.channel_timeout),
                 )
-                self.channel_manager.register_channel("wifi", wifi_transport)
+                self.channel_manager.register_transport(wifi_transport)
+            
+            # BT is optional but registers if plugin available
+            bt_transport = BluetoothTransport()
+            self.channel_manager.register_transport(bt_transport)
 
             # Initialize ProgressReporter
             file_size = file_path.stat().st_size

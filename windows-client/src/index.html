@@ -43,13 +43,34 @@
       </nav>
 
       <div class="nav-label">Connected Devices</div>
-      <div class="device-card">
+      <div class="device-card" style="position: relative; overflow: hidden;">
+        <div class="scan-indicator"></div>
         <div class="device-status">
           <div class="online-dot"></div>
           <span>PIXEL 7 PRO</span>
         </div>
         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-          Multipath (USB + WiFi)
+          Multipath (USB + WiFi + BT)
+        </div>
+      </div>
+
+      <div class="nav-label" style="margin-top: 2rem;">Nearby Radar</div>
+      <div class="radar-container">
+        <div class="radar-item">
+          <i data-lucide="smartphone" size="18" color="var(--hybrid-cyan)"></i>
+          <div style="font-size: 0.875rem; font-weight: 600;">Office Pixel</div>
+          <div class="transport-tags">
+            <span class="tag wifi">WiFi</span>
+            <span class="tag bt">BT</span>
+          </div>
+        </div>
+        <div class="radar-item">
+          <i data-lucide="laptop" size="18" color="var(--hybrid-purple)"></i>
+          <div style="font-size: 0.875rem; font-weight: 600;">Dev Rig</div>
+          <div class="transport-tags">
+            <span class="tag">USB</span>
+            <span class="tag wifi">WiFi</span>
+          </div>
         </div>
       </div>
     </aside>
