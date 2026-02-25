@@ -17,13 +17,8 @@ const elements = {
     pauseBtn: document.getElementById('pause-btn'),
     resumeBtn: document.getElementById('resume-btn'),
     cancelBtn: document.getElementById('cancel-btn'),
-    healthStatus: document.getElementById('health-status'),
-    activeChannels: document.getElementById('active-channels'),
     usbGraph: document.getElementById('usb-graph'),
     wifiGraph: document.getElementById('wifi-graph'),
-    usbBadge: document.getElementById('usb-badge'),
-    wifiBadge: document.getElementById('wifi-badge'),
-    queueCount: document.getElementById('queue-count'),
     pairingQR: document.getElementById('pairing-qr'),
     displayPin: document.getElementById('display-pin')
 };
@@ -90,8 +85,6 @@ function connect() {
         // Reset speeds
         elements.usbSpeed.textContent = '0.0';
         elements.wifiSpeed.textContent = '0.0';
-        elements.usbBadge.classList.remove('online');
-        elements.wifiBadge.classList.remove('online');
     };
 }
 
@@ -104,18 +97,11 @@ function updateUI(payload) {
     elements.usbSpeed.textContent = payload.usbSpeed.toFixed(1);
     elements.wifiSpeed.textContent = payload.wifiSpeed.toFixed(1);
 
-    // Badges
-    if (payload.usbSpeed > 0) elements.usbBadge.classList.add('online');
-    else elements.usbBadge.classList.remove('online');
-
-    if (payload.wifiSpeed > 0) elements.wifiBadge.classList.add('online');
-    else elements.wifiBadge.classList.remove('online');
-
     // Graphs
     updateGraph(elements.usbGraph, usbHistory, payload.usbSpeed);
     updateGraph(elements.wifiGraph, wifiHistory, payload.wifiSpeed);
 
-    // Time
+    // time
     if (payload.remainingTime > 0) {
         const mins = Math.floor(payload.remainingTime / 60);
         const secs = payload.remainingTime % 60;
@@ -124,7 +110,7 @@ function updateUI(payload) {
         elements.remainingTime.textContent = '--:--';
     }
 
-    // Update chunks
+    // update chunks
     payload.chunks.forEach((state, i) => {
         if (chunks[i]) {
             const className = 'chunk' + (state === 1 ? ' active' : state === 2 ? ' done' : '');
@@ -134,11 +120,7 @@ function updateUI(payload) {
         }
     });
 
-    // Health
-    elements.healthStatus.textContent = payload.health.toUpperCase();
-    elements.healthStatus.style.color = payload.health === 'stable' ? 'var(--accent-success)' : 'var(--accent-warning)';
-
-    elements.activeChannels.textContent = payload.activeChannels.join(', ') || 'NONE';
+    log('DIAG', `Link Health: ${payload.health.toUpperCase()} | Channels: ${payload.activeChannels.join(', ') || 'NONE'}`, 'info');
 
     // Button visibility
     if (payload.status === 'paused') {
@@ -216,7 +198,7 @@ function showReceiverUI() {
     }, 1500);
 
     // PIN Box Auto-focus/tabbing
-    const pinBoxes = document.querySelectorAll('.pin-box');
+    const pinBoxes = document.querySelectorAll('.pin-cell');
     pinBoxes.forEach((box, idx) => {
         box.onkeyup = (e) => {
             if (e.target.value.length === 1 && idx < pinBoxes.length - 1) {
