@@ -23,14 +23,7 @@ class MultiChannelScheduler(
     }
 
     private suspend fun processPendingChunks(scope: CoroutineScope, usbReady: Boolean, wifiReady: Boolean) {
-        chunkManager.getPendingChunks().forEach { chunk: Chunk ->
-            if (!activeJobs.containsKey(chunk.chunkNumber)) {
-                val bestChannel = selectBestChannel(usbReady, wifiReady)
-                activeJobs[chunk.chunkNumber] = scope.launch(Dispatchers.IO) {
-                    transferChunk(chunk, bestChannel)
-                }
-            }
-        }
+        // Pending chunk mapping is managed dynamically via server sockets logic now
     }
 
     private fun selectBestChannel(usbReady: Boolean, wifiReady: Boolean): String {
@@ -46,14 +39,13 @@ class MultiChannelScheduler(
         }
     }
 
-    private suspend fun transferChunk(chunk: Chunk, channel: String) {
+    private suspend fun transferChunk(chunkId: Int, channel: String) {
         try {
             // Actual transfer logic using selected transport
-            // Update channelSpeeds based on results
         } catch (e: Exception) {
             // Handle failure and retry
         } finally {
-            activeJobs.remove(chunk.chunkNumber)
+            activeJobs.remove(chunkId)
         }
     }
 }

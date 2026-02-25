@@ -7,8 +7,9 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
+import java.io.DataInputStream
 
-class UsbTransport {
+class UsbTransport(private val chunkManager: ChunkManager? = null) {
     private val isRunning = AtomicBoolean(false)
     private var serverSocket: ServerSocket? = null
     
@@ -35,14 +36,28 @@ class UsbTransport {
     private fun handleClient(socket: Socket) {
         CoroutineScope(Dispatchers.IO).launch {
             socket.use { s ->
-                // Binary Chunk Protocol Implementation
+                val input = DataInputStream(s.getInputStream())
+                while (s.isConnected && !s.isClosed && isRunning.get()) {
+                    try {
+                        val chunkId = input.readInt()
+                        val size = input.readInt()
+                        if (size <= 0 || size > 100 * 1024 * 1024) break // sanity check
+                        
+                        val buffer = ByteArray(size)
+                        input.readFully(buffer)
+                        
+                        chunkManager?.writeChunk(chunkId, buffer)
+                    } catch (e: Exception) {
+                        break
+                    }
+                }
             }
         }
     }
 
     fun stopServer() {
         isRunning.set(false)
-        serverSocket?.close()
+        try { serverSocket?.close() } catch (e: Exception) {}
     }
 }
 
