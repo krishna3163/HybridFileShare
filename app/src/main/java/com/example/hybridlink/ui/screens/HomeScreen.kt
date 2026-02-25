@@ -163,14 +163,16 @@ fun NearbyDevicesRadar() {
         Spacer(modifier = Modifier.height(16.dp))
         
         // Mock Discovered Devices
-        DeviceDiscoveryCard(name = "Windows Station", transports = listOf("WiFi", "BT", "USB"), os = "Windows 11")
+        DeviceDiscoveryCard(name = "Windows Station", transports = listOf("WiFi", "BT", "USB"), os = "Windows 11", mode = "APP")
         Spacer(modifier = Modifier.height(12.dp))
-        DeviceDiscoveryCard(name = "Office Mac", transports = listOf("WiFi", "BT"), os = "macOS")
+        DeviceDiscoveryCard(name = "Kitchen Chromebook", transports = listOf("WiFi"), os = "ChromeOS", mode = "BROWSER")
+        Spacer(modifier = Modifier.height(12.dp))
+        DeviceDiscoveryCard(name = "Office Mac", transports = listOf("WiFi", "BT"), os = "macOS", mode = "APP")
     }
 }
 
 @Composable
-fun DeviceDiscoveryCard(name: String, transports: List<String>, os: String) {
+fun DeviceDiscoveryCard(name: String, transports: List<String>, os: String, mode: String = "APP") {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = HybridSurface,
@@ -196,7 +198,11 @@ fun DeviceDiscoveryCard(name: String, transports: List<String>, os: String) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ModeBadge(mode)
+                }
                 Text(os, style = MaterialTheme.typography.labelSmall, color = TextDim)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -205,6 +211,23 @@ fun DeviceDiscoveryCard(name: String, transports: List<String>, os: String) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ModeBadge(mode: String) {
+    Surface(
+        color = if (mode == "APP") HybridCyan.copy(0.1f) else Color.White.copy(0.1f),
+        shape = RoundedCornerShape(4.dp),
+    ) {
+        Text(
+            mode,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (mode == "APP") HybridCyan else Color.White.copy(0.6f),
+            fontSize = 8.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

@@ -572,6 +572,57 @@ aside {
   color: var(--accent-error);
 }
 
+/* Receiver Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: slide-in 0.4s ease;
+}
+
+.receiver-card {
+  width: 450px;
+  padding: 3rem;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+  border-color: rgba(0, 242, 255, 0.2);
+}
+
+.pin-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 1.5rem;
+}
+
+.pin-box {
+  width: 42px;
+  height: 52px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-usb);
+  transition: all 0.2s ease;
+}
+
+.pin-box:focus {
+  outline: none;
+  border-color: var(--accent-usb);
+  box-shadow: 0 0 15px var(--accent-usb-glow);
+  transform: translateY(-2px);
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .dashboard {

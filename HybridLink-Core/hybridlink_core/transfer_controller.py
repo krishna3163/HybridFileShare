@@ -152,9 +152,32 @@ class TransferController:
             return True
 
         except Exception as e:
-            logger.error(f"Error initializing sender: {e}")
+            logger.error(f"Failed to initialize sender: {e}")
             self.state = TransferState.FAILED
             return False
+
+    def get_pairing_bundle(self, base_web_url: str = "https://hybrid.link") -> dict:
+        """
+        Generate a pairing bundle containing QR data, Browser URL, and a PIN.
+        This enables both App and Browser based receivers.
+        """
+        public_key = self.security_manager.get_public_key_bytes()
+        device_info = {
+            "id": self.channel_manager.node_id,
+            "name": self.channel_manager.node_name
+        }
+        
+        pairing_json = self.pairing_manager.generate_pairing_qr_data(device_info, public_key, base_web_url)
+        pairing_data = json.loads(pairing_json)
+        
+        pin = self.pairing_manager.generate_pin()
+        
+        return {
+            "qr_payload": pairing_data["qr_raw"],
+            "browser_url": pairing_data["browser_url"],
+            "pin": pin,
+            "transfer_id": self.chunk_manager.transfer_id if self.chunk_manager else None
+        }
 
     async def initialize_receiver(
         self,

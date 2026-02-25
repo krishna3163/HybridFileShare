@@ -66,11 +66,35 @@ class ChannelManager:
         self.metrics[plugin.name] = ChannelMetrics(channel_type=plugin.name)
         logger.info(f"Plugin registered: {plugin.name}")
 
+    async def negotiate_peer_capabilities(self, peer_id: str) -> dict:
+        """
+        Exchange capability metadata with a paired peer.
+        Identifies if the peer is a 'Browser Mode' or 'App Mode' node.
+        """
+        peer = self.discovery.discovered_peers.get(peer_id)
+        if not peer:
+            return {"mode": "unknown", "transports": []}
+            
+        capabilities = peer.capabilities or {}
+        is_browser = peer.is_browser_mode
+        
+        negotiated = {
+            "mode": "browser" if is_browser else "installed",
+            "transports": peer.available_transports,
+            "can_multipath": capabilities.get("multipath", False),
+            "preferred_transport": "wifi" if not is_browser else "webrtc"
+        }
+        
+        logger.info(f"Negotiated capabilities for {peer.name}: {negotiated['mode']} mode")
+        return negotiated
+
     async def discover_mesh_peers(self):
-        """Mock implementation of mesh peer discovery."""
-        logger.info("Scanning for HybridLink mesh peers...")
-        # In a real app, this would use mDNS/Zeroconf
-        self.peers["remote-device-01"] = {"ip": "192.168.1.100", "transports": ["wifi", "webrtc"]}
+        """Update mesh peer discovery with active scanning results."""
+        peers = self.discovery.get_peers()
+        for p in peers:
+            self.peers[p["device_id"]] = p
+        
+        return self.peers
 
     async def connect_channel(self, channel_type: str) -> bool:
         """

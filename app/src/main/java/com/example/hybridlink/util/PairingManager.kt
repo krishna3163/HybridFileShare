@@ -17,10 +17,13 @@ class PairingManager {
     private var pinExpiry: Long = 0
 
     fun generatePairingQR(deviceMetadata: DeviceMetadata, publicKey: ByteArray): Bitmap? {
+        val token = java.util.UUID.randomUUID().toString().take(16)
         val payload = mapOf(
             "id" to deviceMetadata.id,
             "name" to deviceMetadata.name,
             "key" to Base64.encodeToString(publicKey, Base64.DEFAULT),
+            "url" to "https://hybrid.link/receive?s=${token}&d=${deviceMetadata.id}",
+            "mode" to "hybrid",
             "ts" to System.currentTimeMillis()
         )
         val data = Json.encodeToString(payload)

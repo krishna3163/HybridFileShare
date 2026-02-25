@@ -142,6 +142,56 @@
                 <!-- Logs go here -->
             </div>
         </footer>
+
+        <!-- Browser Receiver Overlay -->
+        <div id="receiver-overlay" class="overlay" style="display: none;">
+            <div class="card receiver-card">
+                <div class="logo-container" style="justify-content: center; margin-bottom: 2rem;">
+                    <div class="logo-icon"><i data-lucide="download" size="20"></i></div>
+                    <div class="logo">RECEIVE FILES</div>
+                </div>
+
+                <div id="pairing-panel">
+                    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Waiting for sender authorization...
+                    </p>
+                    <div id="pin-entry" style="display: none;">
+                        <p
+                            style="text-align: center; font-size: 0.875rem; color: var(--text-dim); margin-bottom: 1rem;">
+                            ENTER PAIRING PIN
+                        </p>
+                        <div class="pin-inputs">
+                            <input type="text" maxlength="1" class="pin-box">
+                            <input type="text" maxlength="1" class="pin-box">
+                            <input type="text" maxlength="1" class="pin-box">
+                            <input type="text" maxlength="1" class="pin-box">
+                            <input type="text" maxlength="1" class="pin-box">
+                            <input type="text" maxlength="1" class="pin-box">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="transfer-panel" style="display: none;">
+                    <h2 id="incoming-filename" style="text-align: center; margin-bottom: 0.5rem;">File Name</h2>
+                    <p id="incoming-size"
+                        style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">0.0 MB</p>
+
+                    <div class="progress-bar-stack" style="margin-bottom: 1rem;">
+                        <div id="receiver-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim);">
+                        <span id="receiver-percent">0%</span>
+                        <span id="receiver-speed">0.0 MB/s</span>
+                    </div>
+                </div>
+
+                <div class="controls" style="margin-top: 2rem;">
+                    <button id="accept-btn" class="btn primary" style="display: none;">ACCEPT TRANSFER</button>
+                    <button id="close-receiver-btn" class="btn">DISMISS</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module" src="./main.js"></script>
     <script>

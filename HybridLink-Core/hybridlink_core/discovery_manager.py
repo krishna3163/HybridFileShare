@@ -18,7 +18,9 @@ class PeerDevice:
     os_type: str
     ip_address: Optional[str] = None
     available_transports: List[str] = None
+    capabilities: Dict[str, bool] = None
     trust_status: str = "untrusted" # untrusted, paired, trusted
+    is_browser_mode: bool = False
     last_seen: float = 0.0
 
 class DiscoveryManager:
@@ -50,8 +52,13 @@ class DiscoveryManager:
             "type": "HYBRIDLINK_DISCOVERY",
             "device_id": self.device_id,
             "name": self.device_name,
-            "os": "Windows", # Dynamically detect in production
+            "os": "Windows", 
             "transports": ["wifi", "usb", "bluetooth"],
+            "capabilities": {
+                "browser_receiver": True,
+                "pin_pairing": True,
+                "multipath": True
+            },
             "port": self.port
         }
         
@@ -94,6 +101,8 @@ class DiscoveryManager:
                         os_type=payload["os"],
                         ip_address=addr[0],
                         available_transports=payload["transports"],
+                        capabilities=payload.get("capabilities", {}),
+                        is_browser_mode=payload.get("browser_mode", False),
                         last_seen=asyncio.get_event_loop().time()
                     )
                     logger.debug(f"Discovered peer: {payload['name']} at {addr[0]}")

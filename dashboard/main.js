@@ -166,9 +166,9 @@ function log(source, message, level = 'info') {
 }
 
 // Event Listeners
-const sendCommand = (cmd) => {
+const sendCommand = (cmd, payload = {}) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: cmd }));
+        ws.send(JSON.stringify({ type: cmd, ...payload }));
     }
 };
 
@@ -176,6 +176,86 @@ elements.startBtn.onclick = () => sendCommand('START');
 elements.pauseBtn.onclick = () => sendCommand('PAUSE');
 elements.resumeBtn.onclick = () => sendCommand('RESUME');
 elements.cancelBtn.onclick = () => sendCommand('CANCEL');
+
+// Browser Receiver Logic
+const urlParams = new URLSearchParams(window.location.search);
+const sessionToken = urlParams.get('s');
+const deviceId = urlParams.get('d');
+
+if (sessionToken && deviceId) {
+    showReceiverUI();
+}
+
+function showReceiverUI() {
+    const overlay = document.getElementById('receiver-overlay');
+    overlay.style.display = 'flex';
+
+    log('BROWSER', `Joining app-less session: ${sessionToken.substring(0, 8)}...`, 'info');
+
+    // Simulate pairing request
+    setTimeout(() => {
+        document.getElementById('pin-entry').style.display = 'block';
+        log('SECURITY', 'Manual PIN verification required for browser node', 'warn');
+    }, 1500);
+
+    // PIN Box Auto-focus/tabbing
+    const pinBoxes = document.querySelectorAll('.pin-box');
+    pinBoxes.forEach((box, idx) => {
+        box.onkeyup = (e) => {
+            if (e.target.value.length === 1 && idx < pinBoxes.length - 1) {
+                pinBoxes[idx + 1].focus();
+            }
+
+            // Check if all filled
+            const pin = Array.from(pinBoxes).map(b => b.value).join('');
+            if (pin.length === 6) {
+                verifyPairing(pin);
+            }
+        }
+    });
+}
+
+function verifyPairing(pin) {
+    log('SECURITY', 'Verifying session token and PIN...', 'info');
+
+    // Simulate verification
+    setTimeout(() => {
+        document.getElementById('pairing-panel').style.display = 'none';
+        document.getElementById('transfer-panel').style.display = 'block';
+        document.getElementById('accept-btn').style.display = 'flex';
+
+        document.getElementById('incoming-filename').textContent = 'Project_Source_v2.zip';
+        document.getElementById('incoming-size').textContent = '248.5 MB';
+
+        log('AUTH', 'Pairing successful. Session established over WiFi-Relay', 'success');
+    }, 1000);
+}
+
+document.getElementById('accept-btn').onclick = () => {
+    document.getElementById('accept-btn').style.display = 'none';
+    log('TRANSFER', 'Receiving chunks via browser stream...', 'info');
+    simulateReception();
+};
+
+document.getElementById('close-receiver-btn').onclick = () => {
+    window.location.search = '';
+};
+
+function simulateReception() {
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 5;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            log('TRANSFER', 'File received successfully via Browser Mode', 'info');
+        }
+
+        document.getElementById('receiver-progress-fill').style.width = `${progress}%`;
+        document.getElementById('receiver-percent').textContent = `${Math.floor(progress)}%`;
+        document.getElementById('receiver-speed').textContent = `${(Math.random() * 10 + 5).toFixed(1)} MB/s`;
+    }, 500);
+}
 
 // Start connection
 connect();
