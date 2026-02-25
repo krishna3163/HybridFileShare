@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./logo.png" width="120" alt="HybridLink Logo">
+</p>
+
 # HybridLink: High-Speed Multipath File Transfer System
 
 HybridLink is a production-ready, cross-platform file transfer ecosystem designed to maximize throughput by simultaneously utilizing **USB (ADB)** and **WiFi** channels.

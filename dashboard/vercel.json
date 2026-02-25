@@ -1,0 +1,24 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "nodeVersion": "18.x",
+  "env": [
+    {
+      "name": "VITE_API_URL",
+      "value": "https://api.hybridlink.share"
+    }
+  ],
+  "build": {
+    "env": [
+      "VITE_API_URL"
+    ]
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}
