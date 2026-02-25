@@ -8,7 +8,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class UsbConnectionObserver(private val context: Context) {
 
@@ -17,7 +17,7 @@ class UsbConnectionObserver(private val context: Context) {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == "android.hardware.usb.action.USB_STATE") {
                     val connected = intent.extras?.getBoolean("connected") ?: false
-                    launch { send(if (connected) Status.Connected else Status.Disconnected) }
+                    trySend(if (connected) Status.Connected else Status.Disconnected)
                 }
             }
         }

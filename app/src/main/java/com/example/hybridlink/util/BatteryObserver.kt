@@ -9,7 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class BatteryObserver(private val context: Context) {
 
@@ -24,7 +24,7 @@ class BatteryObserver(private val context: Context) {
                 val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                                 status == BatteryManager.BATTERY_STATUS_FULL
 
-                launch { send(BatteryStatus(batteryPct, isCharging)) }
+                trySend(BatteryStatus(batteryPct, isCharging))
             }
         }
 

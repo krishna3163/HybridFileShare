@@ -29,6 +29,7 @@ const els = {
     devAvatar: document.querySelector('.device-avatar'),
     diagUsb: document.getElementById('diag-usb'),
     queueList: document.getElementById('queue-list'),
+    manualConnectBtn: document.getElementById('manual-connect-btn'),
 };
 
 // State
@@ -139,6 +140,18 @@ function requestConnection(dev) {
         isConnected = false;
     };
 }
+
+els.manualConnectBtn.onclick = () => {
+    const ip = prompt("Enter Device IP Address:");
+    if (ip) {
+        addDevice({
+            id: 'manual-' + btoa(ip).replace(/=/g, ''),
+            name: ip,
+            type: "Android",
+            channels: ['WIFI']
+        });
+    }
+};
 
 function establishConnection(dev) {
     isConnected = true;
