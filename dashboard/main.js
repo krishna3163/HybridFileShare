@@ -7,6 +7,9 @@ const els = {
     deviceList: document.getElementById('device-list'),
     dropzone: document.getElementById('dropzone'),
     fileInput: document.getElementById('file-input'),
+    folderInput: document.getElementById('folder-input'),
+    browseFilesBtn: document.getElementById('browse-files-btn'),
+    browseFolderBtn: document.getElementById('browse-folder-btn'),
     selectedFiles: document.getElementById('selected-files'),
     previewName: document.getElementById('preview-filename'),
     previewSize: document.getElementById('preview-filesize'),
@@ -30,6 +33,12 @@ const els = {
     diagUsb: document.getElementById('diag-usb'),
     queueList: document.getElementById('queue-list'),
     manualConnectBtn: document.getElementById('manual-connect-btn'),
+    transferModal: document.getElementById('transfer-modal'),
+    transferReqDev: document.getElementById('transfer-req-dev'),
+    transferReqName: document.getElementById('transfer-req-name'),
+    transferReqSize: document.getElementById('transfer-req-size'),
+    transferRejectBtn: document.getElementById('transfer-reject-btn'),
+    transferAcceptBtn: document.getElementById('transfer-accept-btn'),
 };
 
 // State
@@ -166,40 +175,98 @@ function establishConnection(dev) {
 
     els.dropzone.classList.remove('disabled');
     document.getElementById('global-status-text').textContent = "Paired";
+
+    // Simulate incoming transfer after 10 seconds of connection for testing the UI
+    setTimeout(() => {
+        els.transferReqDev.textContent = dev.name;
+        els.transferReqName.textContent = "documents_archive.zip";
+        els.transferReqSize.textContent = "450 MB";
+        els.transferModal.style.display = 'flex';
+    }, 10000);
 }
+
+els.transferRejectBtn.onclick = () => {
+    els.transferModal.style.display = 'none';
+};
+
+els.transferAcceptBtn.onclick = () => {
+    els.transferModal.style.display = 'none';
+    startTransferUI("documents_archive.zip (Receiving)", 450 * 1024 * 1024);
+
+    // Simulate receive progress
+    let simulatedProgress = 0;
+    currentTransfer.simInterval = setInterval(() => {
+        handleTelemetryEvent("CHUNK_COMPLETED", {
+            chunk_id: Math.floor(Math.random() * CHUNK_COUNT),
+            channel: Math.random() > 0.4 ? 'usb' : 'wifi',
+            bytes: (450 * 1024 * 1024) / CHUNK_COUNT
+        });
+        simulatedProgress += (100 / CHUNK_COUNT);
+        if (simulatedProgress >= 100) {
+            clearInterval(currentTransfer.simInterval);
+            handleTelemetryEvent("TRANSFER_COMPLETED", {});
+        }
+    }, 150);
+};
 
 // -------------------------------------------------------------
 // File Sharing UX
 // -------------------------------------------------------------
-els.dropzone.addEventListener('click', () => { if (isConnected) els.fileInput.click(); });
+els.browseFilesBtn.onclick = (e) => { e.stopPropagation(); els.fileInput.click(); };
+els.browseFolderBtn.onclick = (e) => { e.stopPropagation(); els.folderInput.click(); };
+
 els.dropzone.addEventListener('dragover', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(59,130,246,0.1)'; });
 els.dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(255,255,255,0.02)'; });
 els.dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     els.dropzone.style.background = 'rgba(255,255,255,0.02)';
-    if (isConnected && e.dataTransfer.files.length > 0) processFileSelection(e.dataTransfer.files[0]);
+    if (isConnected && e.dataTransfer.files.length > 0) processFileSelection(e.dataTransfer.files);
 });
-els.fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files[0]); });
+els.fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files); });
+els.folderInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files); });
 
 els.clearBtn.onclick = () => {
     els.selectedFiles.style.display = 'none';
     els.dropzone.style.display = 'flex';
     els.fileInput.value = '';
+    els.folderInput.value = '';
 };
 
-function processFileSelection(file) {
+function processFileSelection(fileList) {
+    if (!isConnected) {
+        alert("Please connect to a device before selecting files.");
+        return;
+    }
+    const file = fileList[0];
     els.dropzone.style.display = 'none';
     els.selectedFiles.style.display = 'block';
-    els.previewName.textContent = file.name;
-    els.previewSize.textContent = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+
+    if (fileList.length > 1) {
+        els.previewName.textContent = `${fileList.length} items selected (starting with ${file.name})`;
+    } else {
+        els.previewName.textContent = file.name;
+    }
+
+    let totalSize = 0;
+    for (let i = 0; i < fileList.length; i++) totalSize += fileList[i].size;
+    els.previewSize.textContent = (totalSize / (1024 * 1024)).toFixed(1) + " MB";
 }
 
 els.sendBtn.onclick = () => {
-    const file = els.fileInput.files[0];
-    if (!file) return;
+    if (!isConnected) {
+        alert("You must pair with a device first!");
+        return;
+    }
+
+    const files = els.fileInput.files.length > 0 ? els.fileInput.files : els.folderInput.files;
+    if (!files || files.length === 0) return;
+
+    // Calculate total size for UI
+    let totalSize = 0;
+    for (let i = 0; i < files.length; i++) totalSize += files[i].size;
 
     // Fallback UI starting if no real backend response
-    startTransferUI(file.name, file.size);
+    startTransferUI(files[0].name + (files.length > 1 ? ` (+${files.length - 1})` : ""), totalSize);
 
     // In a real integrated flow, we would push the file content or trigger the CLI here.
     // E.g., fetch('/api/upload', {method: 'POST'})

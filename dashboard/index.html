@@ -82,10 +82,14 @@
                 <div id="dropzone" class="dropzone disabled">
                     <div class="dropzone-content">
                         <i data-lucide="upload-cloud" size="48"></i>
-                        <h3>Drag & Drop files to send</h3>
-                        <p>or click to browse</p>
+                        <h3>Drag & Drop to send</h3>
+                        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                            <button id="browse-files-btn" class="btn outline">Select Files</button>
+                            <button id="browse-folder-btn" class="btn outline">Select Folder</button>
+                        </div>
                     </div>
-                    <input type="file" id="file-input" multiple />
+                    <input type="file" id="file-input" multiple style="display:none;" />
+                    <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none;" />
                 </div>
 
                 <div id="selected-files" class="selected-files" style="display: none;">
@@ -159,6 +163,27 @@
                 <div style="display:flex; gap: 1rem; margin-top: 2rem;">
                     <button id="reject-btn" class="btn outline full-width">Reject</button>
                     <button id="accept-btn" class="btn primary full-width">Accept</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer Request Modal -->
+        <div id="transfer-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar">
+                    <i data-lucide="download" size="32"></i>
+                </div>
+                <h2>Incoming Transfer</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem;"><span id="transfer-req-dev"
+                        style="font-weight:bold;color:white;">Device</span> wants to send you files.</p>
+                <div
+                    style="background: rgba(255,255,255,0.05); padding:1rem; border-radius:8px; margin-bottom:1rem; text-align:left;">
+                    <strong id="transfer-req-name">example.zip</strong><br>
+                    <span id="transfer-req-size" style="font-size:0.8rem; color:var(--text-muted);">100 MB</span>
+                </div>
+                <div style="display:flex; gap: 1rem;">
+                    <button id="transfer-reject-btn" class="btn outline full-width">Reject</button>
+                    <button id="transfer-accept-btn" class="btn primary full-width">Accept</button>
                 </div>
             </div>
         </div>
