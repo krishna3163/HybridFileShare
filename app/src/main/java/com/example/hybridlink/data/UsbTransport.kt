@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 class UsbTransport {
@@ -17,7 +18,8 @@ class UsbTransport {
     suspend fun startServer(port: Int = 9000) = withContext(Dispatchers.IO) {
         isRunning.set(true)
         try {
-            serverSocket = ServerSocket(port)
+            serverSocket = ServerSocket()
+            serverSocket?.bind(InetSocketAddress("127.0.0.1", port))
             _status.value = ConnectionStatus.CONNECTED
             while (isRunning.get()) {
                 val client = serverSocket?.accept() ?: break

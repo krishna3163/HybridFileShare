@@ -51,15 +51,26 @@ def cli():
 @click.option("--no-usb", is_flag=True, help="Disable USB transfer")
 @click.option("--wifi", is_flag=True, default=True, help="Enable WiFi transfer (default)")
 @click.option("--no-wifi", is_flag=True, help="Disable WiFi transfer")
+@click.option("--no-wifi", is_flag=True, help="Disable WiFi transfer")
 @click.option("--verify", is_flag=True, default=True, help="Verify integrity (default)")
 @click.option("--no-verify", is_flag=True, help="Skip integrity verification")
-def send(file_path, host, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_verify):
+@click.option("-c", "--connect", type=str, help="Connection endpoint: 'adb' or IP_ADDR")
+def send(file_path, host, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_verify, connect):
     """Send a file to Android device over USB and/or WiFi."""
     try:
         file_path = Path(file_path)
         if not file_path.exists():
             console.print("[red]Error: File not found[/red]")
             return
+
+        target_host = host
+        if connect:
+            if connect.lower() == "adb":
+                target_host = "127.0.0.1"
+                wifi = False # Disable wifi if forced adb mode
+                usb = True
+            else:
+                target_host = connect
 
         # Configure transfer
         config = TransferConfig(
@@ -71,11 +82,11 @@ def send(file_path, host, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_ver
 
         console.print(f"[cyan]HybridLink-Core v{__version__}[/cyan]")
         console.print(f"[yellow]Sending: {file_path.name}[/yellow]")
-        console.print(f"[cyan]Destination: {host}[/cyan]")
+        console.print(f"[cyan]Destination: {target_host}[/cyan]")
         console.print(f"[cyan]File size: {_format_size(file_path.stat().st_size)}[/cyan]")
 
         # Run transfer
-        result = asyncio.run(_run_send(file_path, host, config))
+        result = asyncio.run(_run_send(file_path, target_host, config))
 
         if result:
             console.print("[green]✓ Transfer completed successfully[/green]")
@@ -96,12 +107,23 @@ def send(file_path, host, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_ver
 @click.option("--no-usb", is_flag=True, help="Disable USB transfer")
 @click.option("--wifi", is_flag=True, default=True, help="Enable WiFi transfer (default)")
 @click.option("--no-wifi", is_flag=True, help="Disable WiFi transfer")
+@click.option("--no-wifi", is_flag=True, help="Disable WiFi transfer")
 @click.option("--verify", is_flag=True, default=True, help="Verify integrity (default)")
 @click.option("--no-verify", is_flag=True, help="Skip integrity verification")
-def receive(destination, file_size, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_verify):
+@click.option("-c", "--connect", type=str, help="Connection endpoint: 'adb' or IP_ADDR")
+def receive(destination, file_size, chunk_size, usb, no_usb, wifi, no_wifi, verify, no_verify, connect):
     """Receive a file from Android device over USB and/or WiFi."""
     try:
         destination = Path(destination)
+
+        target_host = "192.168.1.100" # fallback
+        if connect:
+            if connect.lower() == "adb":
+                target_host = "127.0.0.1"
+                wifi = False
+                usb = True
+            else:
+                target_host = connect
 
         # Create destination directory if needed
         destination.parent.mkdir(parents=True, exist_ok=True)

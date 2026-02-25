@@ -88,6 +88,39 @@ class UsbTransport(TransportBase):
         self.socket: Optional[socket.socket] = None
         self._connected = False
 
+    async def _setup_adb_forward(self) -> bool:
+        """Set up ADB port forwarding automatically."""
+        try:
+            logger.info(f"Setting up ADB forward for port {self.port}...")
+            # Try to start adb server first
+            process = await asyncio.create_subprocess_exec(
+                "adb", "start-server",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await process.communicate()
+            
+            # Forward port
+            process = await asyncio.create_subprocess_exec(
+                "adb", "forward", f"tcp:{self.port}", f"tcp:{self.port}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                logger.info(f"ADB forward successful: {self.port} -> {self.port}")
+                return True
+            else:
+                logger.error(f"ADB forward failed: {stderr.decode().strip()}")
+                return False
+        except FileNotFoundError:
+            logger.error("ADB executable not found in PATH")
+            return False
+        except Exception as e:
+            logger.error(f"Error setting up ADB forward: {e}")
+            return False
+
     async def connect(self) -> bool:
         """
         Establish connection to USB endpoint via ADB TCP forwarding.
@@ -96,6 +129,11 @@ class UsbTransport(TransportBase):
             True if connection successful, False otherwise
         """
         try:
+            # Set up ADB forwarding first
+            adb_success = await self._setup_adb_forward()
+            if not adb_success:
+                logger.warning("ADB forward setup failed, proceeding with connection attempt anyway...")
+                
             # Create a non-blocking socket
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setblocking(False)

@@ -1,91 +1,46 @@
 /**
  * HybridLink Backend API Server
- * Handles device discovery, file transfers, and coordination
- * 
- * Supports:
- * - REST API for device management and transfers
- * - WebSocket for real-time P2P communication
- * - mDNS for local network device discovery
- * - File chunking and resumable uploads
+ * Simple, working version for local development and production
  */
 
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import http from 'http';
-import WebSocket from 'ws';
-import { DeviceDiscovery } from './services/discovery.js';
+import os from 'os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000;
-const deviceId = process.env.DEVICE_ID || `api-${uuidv4().slice(0, 8)}`;
+const deviceId = `api-${uuidv4().slice(0, 8)}`;
 
-// CORS configuration
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:3000', 'https://hybridlink.vercel.app'],
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Transfer-ID']
-};
+// ============================================================
+// MIDDLEWARE
+// ============================================================
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Multer config for file uploads
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadDir = path.join(__dirname, 'uploads');
-    await fs.mkdir(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
-
+// Multer for file uploads
 const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 * 1024, // 10GB
-    files: 100
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.size > 10 * 1024 * 1024 * 1024) {
-      cb(new Error('File too large'));
-    } else {
-      cb(null, true);
-    }
-  }
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 * 1024 } // 10GB
 });
 
-// Initialize device discovery
-const discovery = new DeviceDiscovery(deviceId, 'HybridLink-API');
+// ============================================================
+// IN-MEMORY STORAGE
+// ============================================================
 
-// Store active transfer sessions
+const devices = new Map();
 const transferSessions = new Map();
 
-// Store connected devices
-const registeredDevices = new Map();
-
-// WebSocket connections
-let wss;
-
 // ============================================================
-// REST API ENDPOINTS
+// HEALTH & STATUS
 // ============================================================
 
-/**
- * Health check endpoint
- */
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -94,24 +49,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-/**
- * Get server status and info
- */
 app.get('/api/status', (req, res) => {
   res.json({
     serverId: deviceId,
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     activeSessions: transferSessions.size,
-    registeredDevices: registeredDevices.size,
-    discoveryStats: discovery.getStats ? discovery.getStats() : { total: 0 }
+    registeredDevices: devices.size
   });
 });
 
-/**
- * Register a device
- * POST /api/devices/register
- */
+// ============================================================
+// DEVICE MANAGEMENT
+// ============================================================
+
 app.post('/api/devices/register', (req, res) => {
   try {
     const { deviceId: clientId, deviceName, platform } = req.body;
@@ -129,7 +80,7 @@ app.post('/api/devices/register', (req, res) => {
       lastSeen: Date.now()
     };
 
-    registeredDevices.set(clientId, device);
+    devices.set(clientId, device);
 
     res.json({
       message: 'Device registered successfully',
@@ -143,24 +94,13 @@ app.post('/api/devices/register', (req, res) => {
   }
 });
 
-/**
- * Get nearby devices (mDNS)
- * GET /api/devices/nearby
- */
 app.get('/api/devices/nearby', (req, res) => {
   try {
-    const nearbyDevices = discovery.getNearbyDevices ? discovery.getNearbyDevices() : [];
-    const registeredList = Array.from(registeredDevices.values());
+    const nearbyDevices = Array.from(devices.values());
     
-    // Combine discovered devices with registered devices
-    const allDevices = [
-      ...registeredList,
-      ...nearbyDevices.filter(d => !registeredDevices.has(d.id))
-    ];
-
     res.json({
-      devices: allDevices,
-      count: allDevices.length,
+      devices: nearbyDevices,
+      count: nearbyDevices.length,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -169,157 +109,204 @@ app.get('/api/devices/nearby', (req, res) => {
   }
 });
 
-// Upload files
-app.post('/api/transfer', upload.array('files'), async (req, res) => {
+app.get('/api/devices/:deviceId', (req, res) => {
   try {
-    const { fromDeviceId, fromDeviceName, toDeviceId } = req.body;
-    const transferId = uuidv4();
+    const device = devices.get(req.params.deviceId);
+    
+    if (!device) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
 
-    const transferData = {
-      transferId,
-      fromDeviceId,
-      fromDeviceName,
-      toDeviceId,
-      files: req.files.map((f) => ({
-        originalName: f.originalname,
-        tempPath: f.path,
-        size: f.size,
-        mimetype: f.mimetype,
-      })),
-      timestamp: Date.now(),
+    res.json(device);
+  } catch (error) {
+    console.error('Error fetching device:', error);
+    res.status(500).json({ error: 'Failed to fetch device' });
+  }
+});
+
+// ============================================================
+// FILE TRANSFER
+// ============================================================
+
+app.post('/api/transfer/initiate', (req, res) => {
+  try {
+    const { senderId, receiverId, fileName, fileSize } = req.body;
+
+    if (!senderId || !receiverId || !fileName) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const sessionId = uuidv4();
+    const session = {
+      id: sessionId,
+      senderId,
+      receiverId,
+      fileName,
+      fileSize,
       status: 'pending',
+      createdAt: new Date().toISOString(),
+      uploadedBytes: 0,
+      chunks: new Map()
     };
 
-    transfers.set(transferId, transferData);
+    transferSessions.set(sessionId, session);
 
-    // Notify recipient via WebSocket (if connected)
-    console.log(
-      `📤 Transfer initiated: ${transferData.files.length} files from ${fromDeviceName}`
-    );
+    console.log(`📤 Transfer initiated: ${sessionId} (${fileName})`);
 
     res.json({
-      transferId,
-      status: 'received',
-      message: 'Files uploaded successfully',
+      sessionId,
+      message: 'Transfer session created',
+      session
     });
   } catch (error) {
-    console.error('Transfer error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Transfer initiation error:', error);
+    res.status(500).json({ error: 'Failed to initiate transfer' });
   }
 });
 
-// Get transfer status
-app.get('/api/transfer/:transferId', (req, res) => {
-  const { transferId } = req.params;
-  const transfer = transfers.get(transferId);
+app.post('/api/transfer/upload/:sessionId', upload.single('chunk'), (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { chunkIndex, totalChunks } = req.body;
 
-  if (!transfer) {
-    return res.status(404).json({ error: 'Transfer not found' });
-  }
+    const session = transferSessions.get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Transfer session not found' });
+    }
 
-  res.json(transfer);
-});
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
 
-// Download transferred files
-app.get('/api/transfer/:transferId/download', (req, res) => {
-  const { transferId } = req.params;
-  const transfer = transfers.get(transferId);
-
-  if (!transfer || transfer.status !== 'pending') {
-    return res.status(404).json({ error: 'Transfer not found or expired' });
-  }
-
-  if (transfer.files.length === 1) {
-    // Single file
-    const file = transfer.files[0];
-    res.download(file.tempPath, file.originalName, () => {
-      transfers.delete(transferId);
-      fs.unlinkSync(file.tempPath);
-    });
-  } else {
-    // Multiple files - create zip
-    const AdmZip = require('adm-zip');
-    const zip = new AdmZip();
-
-    transfer.files.forEach((file) => {
-      zip.addLocalFile(file.tempPath, '', file.originalName);
+    session.chunks.set(parseInt(chunkIndex), {
+      path: req.file.path,
+      size: req.file.size,
+      uploadedAt: new Date()
     });
 
-    const zipPath = path.join(uploadDir, `${transferId}.zip`);
-    zip.writeZip(zipPath);
+    session.uploadedBytes += req.file.size;
+    session.status = 'uploading';
 
-    res.download(zipPath, 'files.zip', () => {
-      transfers.delete(transferId);
-      fs.unlinkSync(zipPath);
-      transfer.files.forEach((f) => {
-        fs.unlinkSync(f.tempPath);
-      });
+    const progress = Math.round((session.chunks.size / totalChunks) * 100);
+
+    console.log(`📦 Chunk ${chunkIndex + 1}/${totalChunks} uploaded for ${sessionId} (${progress}%)`);
+
+    res.json({
+      chunkIndex,
+      progress,
+      uploadedBytes: session.uploadedBytes,
+      message: progress === 100 ? 'Transfer complete' : 'Chunk received'
     });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
   }
 });
 
-// QR Code generation endpoint
-app.post('/api/qrcode', (req, res) => {
-  const { deviceId, deviceName, pin } = req.body;
-  const shareData = {
-    deviceId,
-    deviceName,
-    pin,
-    timestamp: Date.now(),
-  };
+app.get('/api/transfer/status/:sessionId', (req, res) => {
+  try {
+    const session = transferSessions.get(req.params.sessionId);
 
-  res.json({
-    qrData: JSON.stringify(shareData),
-    shareLink: `${process.env.VERCEL_URL || 'http://localhost:3000'}?share=${Buffer.from(
-      JSON.stringify(shareData)
-    ).toString('base64')}`,
-  });
+    if (!session) {
+      return res.status(404).json({ error: 'Transfer session not found' });
+    }
+
+    const progress = session.fileSize ? Math.round((session.uploadedBytes / session.fileSize) * 100) : 0;
+
+    res.json({
+      sessionId: session.id,
+      status: session.status,
+      progress,
+      uploadedBytes: session.uploadedBytes,
+      totalBytes: session.fileSize,
+      fileName: session.fileName,
+      chunksReceived: session.chunks.size
+    });
+  } catch (error) {
+    console.error('Status check error:', error);
+    res.status(500).json({ error: 'Failed to get transfer status' });
+  }
 });
 
-// Scan QR code / Enter PIN
-app.post('/api/connect', (req, res) => {
-  const { pin, fromDeviceId } = req.body;
-  // Validate PIN and establish connection
-  res.json({ status: 'connected', message: 'Successfully connected' });
+app.post('/api/transfer/complete/:sessionId', (req, res) => {
+  try {
+    const session = transferSessions.get(req.params.sessionId);
+
+    if (!session) {
+      return res.status(404).json({ error: 'Transfer session not found' });
+    }
+
+    session.status = 'complete';
+    session.completedAt = new Date();
+
+    console.log(`✅ Transfer complete: ${req.params.sessionId} → ${session.fileName}`);
+
+    res.json({
+      message: 'Transfer complete',
+      sessionId: session.id,
+      downloadPath: `/api/transfer/download/${session.id}`,
+      file: {
+        name: session.fileName,
+        size: session.fileSize
+      }
+    });
+  } catch (error) {
+    console.error('Completion error:', error);
+    res.status(500).json({ error: 'Failed to complete transfer' });
+  }
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
+// ============================================================
+// AUTH
+// ============================================================
+
+app.post('/api/auth/verify-pin', (req, res) => {
+  try {
+    const { deviceId, pin } = req.body;
+
+    if (!deviceId || !pin) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Simple PIN verification
+    const isValid = pin.length === 4 && /^\d+$/.test(pin);
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid PIN' });
+    }
+
+    res.json({
+      message: 'PIN verified',
+      deviceId
+    });
+  } catch (error) {
+    console.error('PIN verification error:', error);
+    res.status(500).json({ error: 'Verification failed' });
+  }
 });
 
-// Static files
-app.get('/', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+// ============================================================
+// ERROR HANDLING
+// ============================================================
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
-// Error handling
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error('Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Cleanup old files every hour
-setInterval(() => {
-  const oneHourAgo = Date.now() - 3600000;
-  transfers.forEach((transfer, id) => {
-    if (transfer.timestamp < oneHourAgo) {
-      transfer.files.forEach((f) => {
-        try {
-          fs.unlinkSync(f.tempPath);
-        } catch (e) {
-          // File already deleted
-        }
-      });
-      transfers.delete(id);
-    }
-  });
-}, 3600000);
+// ============================================================
+// START SERVER
+// ============================================================
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 HybridLink API Server running on port ${PORT}`);
-  registerDevice('web');
+app.listen(port, () => {
+  console.log(`\n🚀 HybridLink API Server running!`);
+  console.log(`✅ HTTP:  http://localhost:${port}`);
+  console.log(`✅ Health check: http://localhost:${port}/health`);
+  console.log(`✅ Server ID: ${deviceId}\n`);
 });
 
 export default app;

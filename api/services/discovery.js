@@ -56,66 +56,6 @@ export class DeviceDiscovery extends EventEmitter {
       }
     });
   }
-            addresses: service.addresses || [],
-            host: service.addresses?.[0] || 'unknown',
-            port: service.port,
-            platform: service.txt?.platform || 'unknown',
-            version: service.txt?.version || 'unknown',
-            status: 'online',
-            timestamp: Date.now(),
-            fqdn: service.fqdn
-          };
-
-          this.discoveredDevices.set(device.id, device);
-          
-          // Reset heartbeat timer
-          this.resetHeartbeat(device.id);
-
-          console.log(`✨ Device found: ${device.name} (${device.host}:${device.port})`);
-          this.emit('deviceUp', device);
-        });
-
-        this.browser.on('down', (service) => {
-          if (service.name === this.deviceName) return;
-
-          const deviceId = service.txt?.deviceId || service.name;
-          const device = this.discoveredDevices.get(deviceId);
-
-          if (device) {
-            device.status = 'offline';
-            console.log(`⚫ Device lost: ${device.name}`);
-            this.emit('deviceDown', device);
-          }
-        });
-
-        console.log('🔍 Scanning for nearby HybridLink devices...');
-        resolve();
-      } catch (error) {
-        console.error('❌ Failed to start scanning:', error);
-        reject(error);
-      }
-    });
-  }
-
-  /**
-   * Reset heartbeat for a device
-   */
-  resetHeartbeat(deviceId) {
-    if (this.heartbeats.has(deviceId)) {
-      clearTimeout(this.heartbeats.get(deviceId));
-    }
-
-    const timeout = setTimeout(() => {
-      const device = this.discoveredDevices.get(deviceId);
-      if (device && device.status === 'online') {
-        device.status = 'offline';
-        this.emit('deviceTimeout', device);
-        console.log(`⏱️ Device timeout: ${device.name}`);
-      }
-    }, this.heartbeatInterval * 2);
-
-    this.heartbeats.set(deviceId, timeout);
-  }
 
   /**
    * Get all discovered devices
