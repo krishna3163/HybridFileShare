@@ -1,0 +1,108 @@
+{
+  "comment": "HybridLink Windows PC Configuration File",
+  "comment_location": "SavedAt: ~/.config/HybridLink/pc_config.json",
+  
+  "device": {
+    "name": "My Android Phone",
+    "type": "phone",
+    "description": "Termux on Android"
+  },
+
+  "network": {
+    "wifi": {
+      "phone_ip": "192.168.1.100",
+      "phone_ssh_port": 22,
+      "phone_transfer_port": 9001,
+      "connection_timeout": 30,
+      "description": "WiFi connection to Termux SSH server"
+    },
+    
+    "usb": {
+      "enabled": true,
+      "adb_forward_local_port": 9000,
+      "adb_forward_remote_port": 9001,
+      "description": "USB connection via ADB port forwarding"
+    }
+  },
+
+  "transfer": {
+    "chunk_size_bytes": 4194304,
+    "comment_chunk_size": "4MB is good for most connections. Use 1MB for slow/unreliable networks. Max 8MB.",
+    
+    "max_retries": 3,
+    "retry_delay_seconds": 1.0,
+    "comment_retry": "Failed chunks automatically retried 3x with 1s delay between attempts",
+    
+    "parallel_workers_per_channel": 2,
+    "comment_workers": "Number of concurrent workers per channel (USB and WiFi)",
+    
+    "verify_integrity": true,
+    "comment_verify": "Verify SHA256 hash after transfer completes"
+  },
+
+  "channels": {
+    "usb_enabled": true,
+    "wifi_enabled": true,
+    "comment_channels": "Both channels work simultaneously for maximum speed. Set to false to disable a channel.",
+    "comment_preference": "Scheduler automatically uses best channel. If both available, chunks distributed by speed."
+  },
+
+  "performance": {
+    "progress_update_interval": 0.5,
+    "comment_progress": "How often to update progress display (seconds)",
+    
+    "channel_health_check_interval": 2.0,
+    "comment_health": "How often to check channel health (seconds)",
+    
+    "speed_sample_interval": 5.0,
+    "comment_speed": "Sampling interval for speed measurement (seconds)"
+  },
+
+  "storage": {
+    "temp_suffix": ".hybridlink_tmp",
+    "manifest_suffix": ".manifest",
+    "comment_storage": "Temporary chunk storage during receive operations"
+  },
+
+  "resume": {
+    "auto_resume": true,
+    "manifest_persistence": true,
+    "cleanup_on_success": true,
+    "comment_resume": "Manifest files enable resume after interruption. Auto-cleanup after success."
+  },
+
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "comment_logging": "Set to DEBUG for verbose output, INFO for normal, WARNING for quiet"
+  },
+
+  "examples": {
+    "slow_network": {
+      "chunk_size_bytes": 1048576,
+      "comment": "1MB chunks for slow or unreliable WiFi"
+    },
+    
+    "fast_network": {
+      "chunk_size_bytes": 8388608,
+      "parallel_workers_per_channel": 4,
+      "comment": "8MB chunks for fast networks with good latency"
+    },
+    
+    "usb_only": {
+      "wifi_enabled": false,
+      "comment": "USB transfer only (phone not on WiFi)"
+    },
+    
+    "wifi_only": {
+      "usb_enabled": false,
+      "comment": "WiFi transfer only (ADB not available)"
+    },
+    
+    "large_files": {
+      "chunk_size_bytes": 8388608,
+      "parallel_workers_per_channel": 4,
+      "comment": "Optimized for 1GB+ files"
+    }
+  }
+}
