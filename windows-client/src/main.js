@@ -48,28 +48,73 @@ function log(message) {
   elements.console.insertBefore(entry, elements.console.firstChild);
 }
 
-// Main Loop (Mocked for Demo)
-let mockProgress = 75;
-setInterval(() => {
-  if (mockProgress < 100) {
-    mockProgress += Math.random() * 0.5;
-    if (mockProgress > 100) mockProgress = 100;
+let currentTransfer = { active: false, totalBytes: 0, transferredBytes: 0, usbBytes: 0, wifiBytes: 0, lastUsb: 0, lastWifi: 0, speedInterval: null };
 
-    updateMetrics({
-      usbSpeed: 450 + Math.random() * 50,
-      wifiSpeed: 300 + Math.random() * 30,
-      progress: Math.floor(mockProgress)
-    });
+function connectTelemetry() {
+  const socket = new WebSocket('ws://127.0.0.1:9002');
 
-    // Randomly update chunks
-    const chunks = document.querySelectorAll('.chunk');
-    const targetIndex = Math.floor(150 + (mockProgress - 75) * 2);
-    if (chunks[targetIndex]) {
-      chunks[targetIndex].classList.add('active');
-      if (targetIndex > 0) chunks[targetIndex - 1].classList.add('completed');
-    }
-  }
-}, 1000);
+  socket.onopen = () => {
+    log('Telemetry Engine Connected. Binding live metrics...');
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "TRANSFER_STARTED") {
+        currentTransfer.active = true;
+        currentTransfer.totalBytes = msg.data.size;
+        currentTransfer.transferredBytes = 0;
+        currentTransfer.usbBytes = 0;
+        currentTransfer.wifiBytes = 0;
+        log(`[CORE] Transfer initiated: ${msg.data.filename}`);
+        if (currentTransfer.speedInterval) clearInterval(currentTransfer.speedInterval);
+        currentTransfer.speedInterval = setInterval(calculateSpeeds, 1000);
+      }
+      if (msg.type === "CHUNK_COMPLETED") {
+        currentTransfer.transferredBytes += msg.data.bytes;
+        if (msg.data.channel === "usb") currentTransfer.usbBytes += msg.data.bytes;
+        else if (msg.data.channel === "wifi") currentTransfer.wifiBytes += msg.data.bytes;
+
+        const percent = Math.min(100, Math.floor((currentTransfer.transferredBytes / currentTransfer.totalBytes) * 100));
+        elements.percentText.textContent = `${percent}%`;
+
+        const offset = 565 - (565 * percent) / 100;
+        elements.progressRing.style.strokeDashoffset = offset;
+
+        // Visually complete a chunk on grid
+        const chunks = document.querySelectorAll('.chunk');
+        const cidx = msg.data.chunk_id % 200;
+        if (chunks[cidx]) {
+          chunks[cidx].classList.add('completed');
+        }
+      }
+      if (msg.type === "TRANSFER_COMPLETED") {
+        currentTransfer.active = false;
+        clearInterval(currentTransfer.speedInterval);
+        log(`[CORE] Transfer completed successfully.`);
+        updateMetrics({ usbSpeed: 0, wifiSpeed: 0, progress: 100 });
+      }
+    } catch (e) { }
+  };
+
+  socket.onclose = () => {
+    setTimeout(connectTelemetry, 5000);
+  };
+}
+
+function calculateSpeeds() {
+  if (!currentTransfer.active) return;
+  const deltaUsb = currentTransfer.usbBytes - currentTransfer.lastUsb;
+  const deltaWifi = currentTransfer.wifiBytes - currentTransfer.lastWifi;
+  currentTransfer.lastUsb = currentTransfer.usbBytes;
+  currentTransfer.lastWifi = currentTransfer.wifiBytes;
+  const usbspeed = deltaUsb / (1024 * 1024);
+  const wifispeed = deltaWifi / (1024 * 1024);
+  elements.usbSpeed.textContent = `${usbspeed.toFixed(1)} Mbps`;
+  elements.wifiSpeed.textContent = `${wifispeed.toFixed(1)} Mbps`;
+}
+
+connectTelemetry();
 
 // Navigation
 const navItems = document.querySelectorAll('.nav-item');
@@ -113,5 +158,4 @@ setInterval(checkSystem, 10000);
 
 // Initialize
 initChunkGrid();
-log('Mission Control initialized. Scanning for ADB devices...');
-setTimeout(() => log('Pixel 7 Pro detected via USB. Synchronizing...'), 2000);
+log('Mission Control initialized. Scanning for remote engine telemetry...');
