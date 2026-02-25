@@ -4,16 +4,13 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "env": [
-    {
-      "name": "VITE_API_URL",
-      "value": "https://api.hybridlink.share"
-    }
-  ],
+  "env": {
+    "VITE_API_URL": "https://api.hybridlink.share"
+  },
   "build": {
-    "env": [
-      "VITE_API_URL"
-    ]
+    "env": {
+      "VITE_API_URL": "https://api.hybridlink.share"
+    }
   },
   "git": {
     "deploymentEnabled": {
