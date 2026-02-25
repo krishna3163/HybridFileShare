@@ -35,7 +35,8 @@ wss.on('connection', (ws) => {
         type: 'pairing',
         payload: {
             pin: '741-963',
-            qr_text: 'hybridlink-pairing-token-xyz'
+            qr_text: 'hybridlink-pairing-token-xyz',
+            qr_b64: 'iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAYAAADnRuK4AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5AAAAB3RJTUUH5AgKCQ8XNxM5'
         }
     }));
 
