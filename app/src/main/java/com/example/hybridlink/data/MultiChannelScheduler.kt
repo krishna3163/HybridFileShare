@@ -1,25 +1,61 @@
 package com.example.hybridlink.data
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import java.util.concurrent.ConcurrentHashMap
 
 class MultiChannelScheduler(
     private val usbTransport: UsbTransport,
     private val wifiTransport: WifiTransport,
     private val chunkManager: ChunkManager
 ) {
+    private val channelSpeeds = ConcurrentHashMap<String, Float>()
+    private val activeJobs = ConcurrentHashMap<Int, Job>()
 
-    fun scheduleChunks(chunks: List<Chunk>): Flow<Chunk> {
-        // TODO: Implement chunk scheduling logic
-        // This will be a complex implementation involving channel speed detection
-        // and dynamic chunk allocation.
-        return kotlinx.coroutines.flow.emptyFlow()
+    fun startAdaptiveScheduling(scope: CoroutineScope) {
+        scope.launch {
+            combine(usbTransport.status, wifiTransport.status) { usb, wifi ->
+                usb == ConnectionStatus.CONNECTED to (wifi == ConnectionStatus.CONNECTED)
+            }.collect { (usbReady, wifiReady) ->
+                if (usbReady || wifiReady) {
+                    processPendingChunks(scope, usbReady, wifiReady)
+                }
+            }
+        }
     }
 
-    fun retryChunk(chunk: Chunk) {
-        // TODO: Implement chunk retry logic
+    private suspend fun processPendingChunks(scope: CoroutineScope, usbReady: Boolean, wifiReady: Boolean) {
+        chunkManager.getPendingChunks().forEach { chunk ->
+            if (!activeJobs.containsKey(chunk.id)) {
+                val bestChannel = selectBestChannel(usbReady, wifiReady)
+                activeJobs[chunk.id] = scope.launch(Dispatchers.IO) {
+                    transferChunk(chunk, bestChannel)
+                }
+            }
+        }
     }
 
-    fun cancelAll() {
-        // TODO: Implement cancellation logic
+    private fun selectBestChannel(usbReady: Boolean, wifiReady: Boolean): String {
+        return when {
+            usbReady && wifiReady -> {
+                val usbSpeed = channelSpeeds["usb"] ?: 0f
+                val wifiSpeed = channelSpeeds["wifi"] ?: 0f
+                if (usbSpeed >= wifiSpeed) "usb" else "wifi"
+            }
+            usbReady -> "usb"
+            wifiReady -> "wifi"
+            else -> "none"
+        }
+    }
+
+    private suspend fun transferChunk(chunk: Chunk, channel: String) {
+        try {
+            // Actual transfer logic using selected transport
+            // Update channelSpeeds based on results
+        } catch (e: Exception) {
+            // Handle failure and retry
+        } finally {
+            activeJobs.remove(chunk.id)
+        }
     }
 }

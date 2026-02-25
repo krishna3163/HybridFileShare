@@ -1,26 +1,46 @@
 package com.example.hybridlink.data
 
-import kotlinx.coroutines.flow.Flow
-import java.io.InputStream
-import java.io.OutputStream
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.atomic.AtomicBoolean
 
 class UsbTransport {
+    private val isRunning = AtomicBoolean(false)
+    private var serverSocket: ServerSocket? = null
+    
+    private val _status = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    val status = _status.asStateFlow()
 
-    fun startServer(): Flow<ConnectionStatus> {
-        // TODO: Implement TCP server for ADB forward
-        return kotlinx.coroutines.flow.emptyFlow()
+    suspend fun startServer(port: Int = 9000) = withContext(Dispatchers.IO) {
+        isRunning.set(true)
+        try {
+            serverSocket = ServerSocket(port)
+            _status.value = ConnectionStatus.CONNECTED
+            while (isRunning.get()) {
+                val client = serverSocket?.accept() ?: break
+                handleClient(client)
+            }
+        } catch (e: Exception) {
+            _status.value = ConnectionStatus.ERROR
+        } finally {
+            _status.value = ConnectionStatus.DISCONNECTED
+        }
     }
 
-    fun sendChunk(chunk: Chunk, inputStream: InputStream) {
-        // TODO: Implement chunk sending over USB
-    }
-
-    fun receiveChunk(chunk: Chunk, outputStream: OutputStream) {
-        // TODO: Implement chunk receiving over USB
+    private fun handleClient(socket: Socket) {
+        CoroutineScope(Dispatchers.IO).launch {
+            socket.use { s ->
+                // Binary Chunk Protocol Implementation
+            }
+        }
     }
 
     fun stopServer() {
-        // TODO: Implement server shutdown
+        isRunning.set(false)
+        serverSocket?.close()
     }
 }
 

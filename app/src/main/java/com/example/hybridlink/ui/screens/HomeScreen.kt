@@ -16,11 +16,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.runtime.*
 import com.example.hybridlink.ui.theme.*
+import com.example.hybridlink.util.ConnectivityObserver
+import com.example.hybridlink.util.NetworkConnectivityObserver
+import com.example.hybridlink.util.UsbConnectionObserver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val networkObserver = remember { NetworkConnectivityObserver(context) }
+    val usbObserver = remember { UsbConnectionObserver(context) }
+    
+    val networkStatus by networkObserver.observe().collectAsState(initial = ConnectivityObserver.Status.Unavailable)
+    val usbStatus by usbObserver.observe().collectAsState(initial = UsbConnectionObserver.Status.Disconnected)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -119,8 +130,16 @@ fun HomeScreen(navController: NavController) {
                     modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    StatusItem("USB", "CONNECTED", HybridCyan)
-                    StatusItem("WIFI", "PENDING", TextSecondary)
+                    StatusItem(
+                        label = "USB", 
+                        status = if (usbStatus == UsbConnectionObserver.Status.Connected) "CONNECTED" else "STOPPED",
+                        color = if (usbStatus == UsbConnectionObserver.Status.Connected) HybridCyan else TextDim
+                    )
+                    StatusItem(
+                        label = "WIFI", 
+                        status = if (networkStatus == ConnectivityObserver.Status.Available) "ACTIVE" else "PENDING",
+                        color = if (networkStatus == ConnectivityObserver.Status.Available) HybridPurple else TextDim
+                    )
                 }
             }
         }
