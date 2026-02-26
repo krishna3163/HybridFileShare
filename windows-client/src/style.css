@@ -1018,3 +1018,221 @@ body {
     height: auto !important;
   }
 }
+
+/* ============================================================
+   FILE BROWSER
+   ============================================================ */
+
+.file-browser-section {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0 1.2rem 1.2rem;
+}
+
+.file-browser-panel {
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-browser-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn.mini {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn.mini:hover {
+  background: var(--panel-active);
+  color: var(--primary);
+}
+
+.file-browser-breadcrumb {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.crumb {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all .2s;
+}
+
+.crumb:hover {
+  background: var(--panel-active);
+  color: var(--primary);
+}
+
+.crumb-sep {
+  color: rgba(255, 255, 255, .2);
+}
+
+.file-browser-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.fb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all .15s;
+  border-left: 3px solid transparent;
+}
+
+.fb-item:hover {
+  background: rgba(59, 130, 246, .06);
+}
+
+.fb-item.selected {
+  background: rgba(59, 130, 246, .12);
+  border-left-color: var(--primary);
+}
+
+.fb-name {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fb-size {
+  font-size: 11px;
+  color: var(--text-dim);
+  min-width: 60px;
+  text-align: right;
+}
+
+.fb-loading,
+.fb-empty,
+.fb-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.fb-error {
+  color: #ef4444;
+}
+
+.file-browser-footer {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.fb-footer-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Engine Status Panel */
+.engine-status-panel {
+  max-height: 420px;
+}
+
+.engine-info {
+  padding: 8px 16px;
+}
+
+.engine-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.engine-row:last-child {
+  border: none;
+}
+
+.engine-label {
+  color: var(--text-dim);
+}
+
+.engine-value {
+  font-weight: 600;
+}
+
+.engine-value.highlight {
+  color: var(--accent);
+}
+
+.engine-progress {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.engine-progress-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.progress-bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, .06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--gradient);
+  border-radius: 3px;
+  transition: width .3s ease;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .file-browser-section {
+    grid-template-columns: 1fr;
+  }
+}

@@ -228,8 +228,74 @@
                 </div>
             </div>
 
+            <!-- File Browser Section -->
+            <div class="file-browser-section" id="file-browser-section">
+                <div class="panel file-browser-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title"><i data-lucide="folder-open" size="18"></i> File Browser</h3>
+                        <div class="file-browser-actions">
+                            <button class="btn mini" id="fb-up-btn" title="Go Up"><i data-lucide="arrow-up"
+                                    size="14"></i></button>
+                            <button class="btn mini" id="fb-refresh-btn" title="Refresh"><i data-lucide="refresh-cw"
+                                    size="14"></i></button>
+                            <button class="btn mini" id="fb-mkdir-btn" title="New Folder"><i data-lucide="folder-plus"
+                                    size="14"></i></button>
+                        </div>
+                    </div>
+                    <div class="file-browser-breadcrumb" id="fb-breadcrumb">
+                        <span class="crumb" data-path="~">Home</span>
+                    </div>
+                    <div class="file-browser-list" id="fb-file-list">
+                        <div class="fb-loading"><i data-lucide="loader" class="spin" size="24"></i> Loading...</div>
+                    </div>
+                    <div class="file-browser-footer">
+                        <span id="fb-status">Ready</span>
+                        <div class="fb-footer-actions">
+                            <button class="btn secondary mini" id="fb-send-btn" disabled><i data-lucide="upload"
+                                    size="14"></i> Send Selected</button>
+                            <button class="btn secondary mini" id="fb-delete-btn" disabled><i data-lucide="trash-2"
+                                    size="14"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- Engine Status -->
+                <div class="panel engine-status-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title"><i data-lucide="activity" size="18"></i> Transfer Engine</h3>
+                    </div>
+                    <div class="engine-info">
+                        <div class="engine-row">
+                            <span class="engine-label">Engine State</span>
+                            <span class="engine-value" id="engine-state">Idle</span>
+                        </div>
+                        <div class="engine-row">
+                            <span class="engine-label">Control Port</span>
+                            <span class="engine-value" id="engine-port">5740</span>
+                        </div>
+                        <div class="engine-row">
+                            <span class="engine-label">Channels</span>
+                            <span class="engine-value" id="engine-channels">0</span>
+                        </div>
+                        <div class="engine-row">
+                            <span class="engine-label">Upload Speed</span>
+                            <span class="engine-value highlight" id="engine-upload-speed">0 B/s</span>
+                        </div>
+                        <div class="engine-row">
+                            <span class="engine-label">Download Speed</span>
+                            <span class="engine-value highlight" id="engine-download-speed">0 B/s</span>
+                        </div>
+                    </div>
+                    <div class="engine-progress" id="engine-progress" style="display:none;">
+                        <div class="engine-progress-label" id="engine-progress-label">Transferring...</div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="engine-progress-fill" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
 
         <!-- Modals for Logic Compatibility -->
         <div id="connection-modal" class="modal-overlay" style="display: none;">

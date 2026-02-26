@@ -540,7 +540,6 @@ function addToQueue(name) {
 }
 
 function simulateInitialTeaser() {
-    // Teaser only if no active transfer
     let p = 76;
     setInterval(() => {
         if (!state.currentTransfer.active && els.progressRing && els.metrics && els.metrics.style.display !== 'none') {
@@ -552,5 +551,301 @@ function simulateInitialTeaser() {
     }, 200);
 }
 
+// ============================================================
+// FILE BROWSER — Real PC file system browsing via /api/list-files
+// ============================================================
+
+const fileBrowser = {
+    currentPath: '',
+    selectedFiles: new Set(),
+    files: [],
+
+    async loadFiles(dirPath) {
+        const list = document.getElementById('fb-file-list');
+        const status = document.getElementById('fb-status');
+        if (!list) return;
+
+        list.innerHTML = '<div class="fb-loading">Loading...</div>';
+
+        try {
+            const url = dirPath
+                ? `/api/list-files?path=${encodeURIComponent(dirPath)}`
+                : '/api/list-files';
+            const res = await fetch(url);
+            const data = await res.json();
+
+            this.currentPath = data.path || dirPath || '~';
+            this.files = data.files || [];
+            this.selectedFiles.clear();
+            this.updateBreadcrumb();
+            this.renderFiles();
+            status.textContent = `${this.files.length} items`;
+        } catch (err) {
+            list.innerHTML = `<div class="fb-error">Error: ${err.message}</div>`;
+            status.textContent = 'Error loading files';
+        }
+    },
+
+    renderFiles() {
+        const list = document.getElementById('fb-file-list');
+        if (!list) return;
+        if (this.files.length === 0) {
+            list.innerHTML = '<div class="fb-empty">This folder is empty</div>';
+            return;
+        }
+        // Sort: directories first, then files
+        const sorted = [...this.files].sort((a, b) => {
+            if (a.isDirectory && !b.isDirectory) return -1;
+            if (!a.isDirectory && b.isDirectory) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        list.innerHTML = sorted.map(f => {
+            const icon = f.isDirectory ? 'folder' : this.getFileIcon(f.name);
+            const size = f.isFile ? this.formatSize(f.size) : '';
+            return `<div class="fb-item ${this.selectedFiles.has(f.path) ? 'selected' : ''}"
+                         data-path="${f.path}" data-is-dir="${f.isDirectory}">
+                <i data-lucide="${icon}" size="16"></i>
+                <span class="fb-name">${f.name}</span>
+                <span class="fb-size">${size}</span>
+            </div>`;
+        }).join('');
+
+        // Re-init icons
+        if (window.lucide) lucide.createIcons();
+
+        // Bind clicks
+        list.querySelectorAll('.fb-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const path = item.dataset.path;
+                const isDir = item.dataset.isDir === 'true';
+                if (isDir) {
+                    this.loadFiles(path);
+                } else {
+                    this.toggleSelect(path, item);
+                }
+            });
+        });
+    },
+
+    toggleSelect(path, el) {
+        if (this.selectedFiles.has(path)) {
+            this.selectedFiles.delete(path);
+            el.classList.remove('selected');
+        } else {
+            this.selectedFiles.add(path);
+            el.classList.add('selected');
+        }
+        const sendBtn = document.getElementById('fb-send-btn');
+        const delBtn = document.getElementById('fb-delete-btn');
+        if (sendBtn) sendBtn.disabled = this.selectedFiles.size === 0;
+        if (delBtn) delBtn.disabled = this.selectedFiles.size === 0;
+    },
+
+    updateBreadcrumb() {
+        const bc = document.getElementById('fb-breadcrumb');
+        if (!bc) return;
+        const parts = this.currentPath.replace(/\\\\/g, '/').split('/').filter(Boolean);
+        let cumPath = '';
+        bc.innerHTML = parts.map((p, i) => {
+            cumPath += (i === 0 && p.includes(':') ? p + '/' : p + '/');
+            return `<span class="crumb" data-path="${cumPath}">${p}</span>`;
+        }).join(' <span class="crumb-sep">/</span> ');
+
+        bc.querySelectorAll('.crumb').forEach(c => {
+            c.addEventListener('click', () => this.loadFiles(c.dataset.path));
+        });
+    },
+
+    goUp() {
+        const parts = this.currentPath.replace(/\\\\/g, '/').split('/').filter(Boolean);
+        if (parts.length > 1) {
+            parts.pop();
+            this.loadFiles(parts.join('/'));
+        }
+    },
+
+    async deleteSelected() {
+        if (this.selectedFiles.size === 0) return;
+        if (!confirm(`Delete ${this.selectedFiles.size} item(s)?`)) return;
+        for (const fp of this.selectedFiles) {
+            try {
+                await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filePath: fp })
+                });
+            } catch (e) { console.error('Delete error:', e); }
+        }
+        this.loadFiles(this.currentPath);
+    },
+
+    async sendSelected() {
+        if (this.selectedFiles.size === 0) return;
+        try {
+            const res = await fetch('/api/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filePaths: [...this.selectedFiles],
+                    remoteDir: '/sdcard/Download'
+                })
+            });
+            const result = await res.json();
+            alert(`Transfer complete: ${this.formatSize(result.totalBytes)} in ${(result.elapsedMs / 1000).toFixed(1)}s`);
+        } catch (e) {
+            alert('Transfer error: ' + e.message);
+        }
+    },
+
+    async createFolder() {
+        const name = prompt('New folder name:');
+        if (!name) return;
+        const sep = this.currentPath.includes('\\') ? '\\' : '/';
+        const newPath = this.currentPath + sep + name;
+        try {
+            await fetch('/api/mkdir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dirPath: newPath })
+            });
+            this.loadFiles(this.currentPath);
+        } catch (e) { console.error('Mkdir error:', e); }
+    },
+
+    getFileIcon(name) {
+        const ext = name.split('.').pop().toLowerCase();
+        const icons = {
+            pdf: 'file-text', doc: 'file-text', docx: 'file-text', txt: 'file-text',
+            jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', svg: 'image', webp: 'image',
+            mp4: 'video', avi: 'video', mkv: 'video', mov: 'video',
+            mp3: 'music', wav: 'music', flac: 'music', aac: 'music',
+            zip: 'archive', rar: 'archive', '7z': 'archive', tar: 'archive',
+            js: 'file-code', py: 'file-code', java: 'file-code', kt: 'file-code',
+            apk: 'smartphone', exe: 'monitor',
+        };
+        return icons[ext] || 'file';
+    },
+
+    formatSize(bytes) {
+        if (!bytes || bytes === 0) return '';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+        return `${bytes.toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+    },
+
+    init() {
+        const upBtn = document.getElementById('fb-up-btn');
+        const refreshBtn = document.getElementById('fb-refresh-btn');
+        const mkdirBtn = document.getElementById('fb-mkdir-btn');
+        const sendBtn = document.getElementById('fb-send-btn');
+        const deleteBtn = document.getElementById('fb-delete-btn');
+
+        if (upBtn) upBtn.addEventListener('click', () => this.goUp());
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.loadFiles(this.currentPath));
+        if (mkdirBtn) mkdirBtn.addEventListener('click', () => this.createFolder());
+        if (sendBtn) sendBtn.addEventListener('click', () => this.sendSelected());
+        if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteSelected());
+
+        // Load home directory on startup
+        this.loadFiles('');
+    }
+};
+
+// ============================================================
+// WEBSOCKET TELEMETRY — Real-time engine speed/progress updates
+// ============================================================
+
+function initTelemetryReceiver() {
+    const wsUrl = `ws://${window.location.hostname}:9002`;
+    let ws;
+
+    function connect() {
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => console.log('📡 Telemetry WebSocket connected');
+        ws.onclose = () => setTimeout(connect, 3000);
+        ws.onerror = () => { };
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                handleTelemetry(msg);
+            } catch (e) { }
+        };
+    }
+
+    function handleTelemetry(msg) {
+        const { type, data } = msg;
+        switch (type) {
+            case 'TRANSFER_SPEED':
+                updateEngineSpeed(data);
+                break;
+            case 'TRANSFER_PROGRESS':
+                updateEngineProgress(data);
+                break;
+            case 'TRANSFER_COMPLETE':
+                onTransferComplete(data);
+                break;
+            case 'ENGINE_STATUS':
+                updateEngineState(data);
+                break;
+            case 'CHANNEL_CONNECTED':
+                const chEl = document.getElementById('engine-channels');
+                if (chEl) chEl.textContent = data.total || '0';
+                break;
+        }
+    }
+
+    function formatSpeed(bytesPerSec) {
+        if (bytesPerSec < 1024) return `${bytesPerSec} B/s`;
+        if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+        return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+    }
+
+    function updateEngineSpeed(data) {
+        const upEl = document.getElementById('engine-upload-speed');
+        const dnEl = document.getElementById('engine-download-speed');
+        if (upEl) upEl.textContent = formatSpeed(data.totalUploadSpeed || 0);
+        if (dnEl) dnEl.textContent = formatSpeed(data.totalDownloadSpeed || 0);
+    }
+
+    function updateEngineProgress(data) {
+        const progEl = document.getElementById('engine-progress');
+        const fillEl = document.getElementById('engine-progress-fill');
+        const labelEl = document.getElementById('engine-progress-label');
+        if (progEl) progEl.style.display = 'block';
+        if (data.currentFile && labelEl) labelEl.textContent = `Sending: ${data.currentFile}`;
+        if (data.bytesTransferred && data.totalFiles && fillEl) {
+            // Simple percentage estimate
+            fillEl.style.width = '50%'; // Will be refined with actual total
+        }
+    }
+
+    function onTransferComplete(data) {
+        const progEl = document.getElementById('engine-progress');
+        const fillEl = document.getElementById('engine-progress-fill');
+        const labelEl = document.getElementById('engine-progress-label');
+        if (fillEl) fillEl.style.width = '100%';
+        if (labelEl) {
+            const speed = formatSpeed(data.avgSpeed || 0);
+            const secs = ((data.elapsedMs || 0) / 1000).toFixed(1);
+            labelEl.textContent = `Complete! ${fileBrowser.formatSize(data.totalBytes)} in ${secs}s (${speed})`;
+        }
+        setTimeout(() => { if (progEl) progEl.style.display = 'none'; }, 5000);
+    }
+
+    function updateEngineState(data) {
+        const stateEl = document.getElementById('engine-state');
+        if (stateEl) stateEl.textContent = (data.state || 'idle').charAt(0).toUpperCase() + (data.state || 'idle').slice(1);
+    }
+
+    connect();
+}
+
 // Initialize on Load
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    fileBrowser.init();
+    initTelemetryReceiver();
+});
+

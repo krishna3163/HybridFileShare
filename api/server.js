@@ -317,6 +317,121 @@ app.post('/api/auth/verify-pin', (req, res) => {
 });
 
 // ============================================================
+// ============================================================
+// TRANSFER ENGINE (Real File Transfer)
+// ============================================================
+
+import { createRequire } from 'module';
+const require2 = createRequire(import.meta.url);
+const { TransferEngine } = require2('./services/transfer-engine.js');
+
+const transferEngine = new TransferEngine({
+  controlPort: 5740,
+  homeDir: os.homedir(),
+});
+
+// Start the transfer engine control server
+transferEngine.startServer().then((port) => {
+  console.log(`✅ Transfer Engine control channel on port ${port}`);
+}).catch(err => {
+  console.warn('⚠️ Transfer Engine could not start:', err.message);
+});
+
+// Forward transfer engine events to WebSocket telemetry
+transferEngine.on('speed', (data) => {
+  broadcastTelemetry('TRANSFER_SPEED', data);
+});
+transferEngine.on('progress', (data) => {
+  broadcastTelemetry('TRANSFER_PROGRESS', data);
+});
+transferEngine.on('complete', (data) => {
+  broadcastTelemetry('TRANSFER_COMPLETE', data);
+});
+transferEngine.on('status', (data) => {
+  broadcastTelemetry('ENGINE_STATUS', data);
+});
+transferEngine.on('channel', (data) => {
+  broadcastTelemetry('CHANNEL_CONNECTED', data);
+});
+
+// ============================================================
+// FILE BROWSER API
+// ============================================================
+
+app.get('/api/list-files', (req, res) => {
+  try {
+    const dirPath = req.query.path || os.homedir();
+    const files = transferEngine.listLocalFiles(dirPath);
+    res.json({ path: dirPath, files });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/mkdir', (req, res) => {
+  try {
+    const { dirPath } = req.body;
+    if (!dirPath) return res.status(400).json({ error: 'dirPath required' });
+    const fs2 = require2('fs');
+    fs2.mkdirSync(dirPath, { recursive: true });
+    res.json({ success: true, path: dirPath });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/delete', (req, res) => {
+  try {
+    const { filePath } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'filePath required' });
+    const fs2 = require2('fs');
+    const stat = fs2.statSync(filePath);
+    if (stat.isDirectory()) {
+      fs2.rmSync(filePath, { recursive: true, force: true });
+    } else {
+      fs2.unlinkSync(filePath);
+    }
+    res.json({ success: true, deleted: filePath });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/send', async (req, res) => {
+  try {
+    const { filePaths, remoteDir } = req.body;
+    if (!filePaths || !Array.isArray(filePaths)) {
+      return res.status(400).json({ error: 'filePaths array required' });
+    }
+    const result = await transferEngine.sendFiles(filePaths, remoteDir || '/sdcard/Download');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/receive', async (req, res) => {
+  try {
+    const { destDir } = req.body;
+    const dest = destDir || path.join(os.homedir(), 'Downloads', 'HybridFileShare');
+    const fs2 = require2('fs');
+    if (!fs2.existsSync(dest)) fs2.mkdirSync(dest, { recursive: true });
+    const result = await transferEngine.receiveFiles(dest);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/transfer-status', (req, res) => {
+  res.json({
+    state: transferEngine.state,
+    channels: transferEngine.transferConnections.length,
+    progress: transferEngine.transferProgress,
+  });
+});
+
+// ============================================================
 // ERROR HANDLING
 // ============================================================
 
