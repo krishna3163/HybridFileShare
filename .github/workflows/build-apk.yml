@@ -34,13 +34,13 @@ jobs:
       working-directory: ./app
     
     - name: Upload debug APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: hybridlink-debug.apk
         path: app/app/build/outputs/apk/debug/app-debug.apk
     
     - name: Upload release APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: hybridlink-release.apk
         path: app/app/build/outputs/apk/release/app-release.apk
