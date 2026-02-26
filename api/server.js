@@ -94,10 +94,41 @@ app.post('/api/devices/register', (req, res) => {
   }
 });
 
+// ============================================================
+// DEVICE DISCOVERY (mDNS)
+// ============================================================
+
+import { getDiscoveryService } from './services/discovery.js';
+const discovery = getDiscoveryService(deviceId, `HybridFileShare-${os.hostname()}`);
+
+discovery.startBroadcasting().then(() => discovery.startScanning());
+
+app.get('/api/local-ip', (req, res) => {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4;
+      if (net.family === familyV4Value && !net.internal) {
+        return res.json({ ip: net.address });
+      }
+    }
+  }
+  res.json({ ip: '127.0.0.1' });
+});
+
+app.get('/api/discover-devices', (req, res) => {
+  try {
+    const nearby = discovery.getNearbyDevices();
+    res.json(nearby);
+  } catch (error) {
+    console.error('Discovery error:', error);
+    res.status(500).json({ error: 'Failed to discover devices' });
+  }
+});
+
 app.get('/api/devices/nearby', (req, res) => {
   try {
-    const nearbyDevices = Array.from(devices.values());
-    
+    const nearbyDevices = discovery.getNearbyDevices();
     res.json({
       devices: nearbyDevices,
       count: nearbyDevices.length,
@@ -112,7 +143,7 @@ app.get('/api/devices/nearby', (req, res) => {
 app.get('/api/devices/:deviceId', (req, res) => {
   try {
     const device = devices.get(req.params.deviceId);
-    
+
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
     }
@@ -302,11 +333,48 @@ app.use((err, req, res, next) => {
 // START SERVER
 // ============================================================
 
-app.listen(port, () => {
-  console.log(`\n🚀 HybridLink API Server running!`);
-  console.log(`✅ HTTP:  http://localhost:${port}`);
-  console.log(`✅ Health check: http://localhost:${port}/health`);
-  console.log(`✅ Server ID: ${deviceId}\n`);
+// ============================================================
+// START SERVER
+// ============================================================
+
+import { WebSocketServer } from 'ws';
+
+// Create WebSocket server for telemetry on port 9002
+const wss = new WebSocketServer({ port: 9002 });
+
+wss.on('connection', (ws) => {
+  console.log('📡 Dashboard/Client connected via WebSocket (Port 9002)');
+
+  // Send a welcome message
+  ws.send(JSON.stringify({
+    type: 'SYSTEM_READY',
+    data: {
+      serverId: deviceId,
+      version: '1.0.0'
+    }
+  }));
+
+  ws.on('close', () => {
+    console.log('👋 Dashboard/Client disconnected');
+  });
+});
+
+// Helper to broadcast telemetry to all connected dashboards
+export function broadcastTelemetry(type, data) {
+  const payload = JSON.stringify({ type, data, timestamp: Date.now() });
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) { // 1 = OPEN
+      client.send(payload);
+    }
+  });
+}
+
+const server = app.listen(port, () => {
+  console.log(`\n🚀 HybridFileShare API Server running!`);
+  console.log(`✅ HTTP:      http://localhost:${port}`);
+  console.log(`✅ Telemetry: ws://localhost:9002`);
+  console.log(`✅ Health:     http://localhost:${port}/health`);
+  console.log(`✅ Server ID:  ${deviceId}\n`);
 });
 
 export default app;

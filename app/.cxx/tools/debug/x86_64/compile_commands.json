@@ -1,0 +1,7 @@
+[
+{
+  "directory": "C:/Users/Admin/Desktop/HybridFileShare/app/.cxx/Debug/4v3f5h6n/x86_64",
+  "command": "C:\\Users\\Admin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=x86_64-none-linux-android26 --sysroot=C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dnative_memory_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -o CMakeFiles\\native-memory.dir\\native-memory.cpp.o -c C:\\Users\\Admin\\Desktop\\HybridFileShare\\app\\src\\main\\cpp\\native-memory.cpp",
+  "file": "C:\\Users\\Admin\\Desktop\\HybridFileShare\\app\\src\\main\\cpp\\native-memory.cpp"
+}
+]

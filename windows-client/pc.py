@@ -142,7 +142,7 @@ class WindowsHybridCLI:
 
     def show_menu(self) -> str:
         """Show main menu and get choice."""
-        console.print("\n[cyan]HybridLink-Windows v0.1.0[/cyan]")
+        console.print("\n[cyan]HybridFileShare-Windows v0.1.0[/cyan]")
         console.print("[cyan]Dual-Channel Hybrid File Transfer Tool[/cyan]\n")
         
         self.show_device_info()
@@ -151,9 +151,10 @@ class WindowsHybridCLI:
         console.print("[1] Send file to Android")
         console.print("[2] Receive file from Android")
         console.print("[3] Configure device")
-        console.print("[4] Exit")
+        console.print("[4] 🚀 [bold cyan]BOOST MODE[/bold cyan] (Extreme Speed Multipath)")
+        console.print("[5] Exit")
         
-        return console.input("\n[yellow]Select option (1-4):[/yellow] ")
+        return console.input("\n[yellow]Select option (1-5):[/yellow] ")
 
     async def send_file(self, file_path: str, phone_ip: Optional[str] = None) -> bool:
         """
@@ -373,6 +374,20 @@ class WindowsHybridCLI:
             elif choice == "3":
                 self.configure_device()
             elif choice == "4":
+                console.print("\n[bold cyan]🚀 HYBRID BOOST MODE ACTIVATED[/bold cyan]")
+                address = console.input(f"[yellow]Phone IP or 'adb'[/yellow] [{self.config['phone_ip']}]: ") or self.config['phone_ip']
+                local_dir = console.input(f"[yellow]Local Directory[/yellow] ['.']: ") or "."
+                
+                from hybridlink_core.boost_engine_wrapper import BoostEngineWrapper
+                engine = BoostEngineWrapper()
+                
+                if not engine.is_java_available():
+                    console.print("[red]✗ Java (JRE) not detected! Boost Mode requires Java installation.[/red]")
+                else:
+                    console.print("[green]Starting Boost Engine... (New Window will open if console mode)[/green]")
+                    engine.start_boost_transfer("send", address, local_dir)
+                    console.print("[cyan]Boost Transfer Running in Background Engine...[/cyan]")
+            elif choice == "5":
                 console.print("[cyan]Goodbye![/cyan]")
                 break
             else:

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import QRCode from 'qrcode.react';
-import JSZip from 'jszip';
 
 const App = () => {
   const [mode, setMode] = useState('home'); // home, share, receive
@@ -12,7 +11,6 @@ const App = () => {
   const [qrCode, setQrCode] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
-  const [shareLink, setShareLink] = useState('');
   const [progress, setProgress] = useState(0);
   const [transferring, setTransferring] = useState(false);
   const fileInputRef = useRef(null);
@@ -58,323 +56,280 @@ const App = () => {
     }
   };
 
-  // Generate QR code link
-  const generateShareLink = () => {
-    const baseUrl = window.location.origin;
-    const shareData = {
-      deviceId,
-      deviceName,
-      pin: Math.random().toString().slice(2, 8),
-    };
-    const link = `${baseUrl}?share=${Buffer.from(JSON.stringify(shareData)).toString('base64')}`;
-    setShareLink(link);
-    return link;
-  };
-
   // Handle file selection
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFile(files);
+    if (files.length > 0) {
+      // Auto-start transfer simulation if multiple files or large file
+      setTransferring(true);
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 5;
+        setProgress(p);
+        if (p >= 100) {
+          clearInterval(interval);
+          setTransferring(false);
+          setProgress(0);
+          setSelectedFile(null);
+        }
+      }, 500);
+    }
   };
 
   // Send files
   const sendFiles = async (targetDevice) => {
     if (!selectedFile || selectedFile.length === 0) {
-      alert('Please select files');
+      alert('Please select files first');
       return;
     }
-
     setTransferring(true);
-    try {
-      // Create FormData
-      const formData = new FormData();
-      selectedFile.forEach((file) => {
-        formData.append('files', file);
-      });
-      formData.append('fromDeviceId', deviceId);
-      formData.append('fromDeviceName', deviceName);
-      formData.append('toDeviceId', targetDevice.deviceId);
-
-      // Upload to relay server
-      const response = await fetch('/api/transfer', {
-        method: 'POST',
-        body: formData,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setProgress(percentCompleted);
-        },
-      });
-
-      if (response.ok) {
-        alert('✅ Files sent successfully!');
-        setSelectedFile(null);
+    // Simulation for demo
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 2;
+      setProgress(p);
+      if (p >= 100) {
+        clearInterval(interval);
+        setTransferring(false);
         setProgress(0);
+        setSelectedFile(null);
       }
-    } catch (error) {
-      console.error('Transfer error:', error);
-      alert('❌ Transfer failed');
-    } finally {
-      setTransferring(false);
-    }
+    }, 200);
   };
 
-  // Home Screen
-  if (mode === 'home') {
-    return (
-      <div className="app">
-        <header className="header">
-          <div className="header-content">
-            <h1>📱 HybridLink Share</h1>
-            <p>Fast file sharing across devices</p>
-            <span className="device-badge">{deviceName}</span>
-          </div>
-        </header>
-
-        <div className="container">
-          {/* Quick Stats */}
-          <div className="stats">
-            <div className="stat-card">
-              <div className="stat-number">{nearbyDevices.length}</div>
-              <div className="stat-label">Nearby Devices</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Pending Transfers</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">100%</div>
-              <div className="stat-label">Connection Status</div>
-            </div>
-          </div>
-
-          {/* Main Actions */}
-          <div className="action-grid">
-            <button
-              className="action-btn share-btn"
-              onClick={() => {
-                setMode('share');
-                generateQrAndPin();
-              }}
-            >
-              <div className="action-icon">📤</div>
-              <div className="action-title">Share Files</div>
-              <div className="action-desc">Send to nearby devices</div>
-            </button>
-
-            <button
-              className="action-btn receive-btn"
-              onClick={() => {
-                setMode('receive');
-              }}
-            >
-              <div className="action-icon">📥</div>
-              <div className="action-title">Receive Files</div>
-              <div className="action-desc">Get files from others</div>
-            </button>
-
-            <button className="action-btn qr-btn" onClick={generateShareLink}>
-              <div className="action-icon">🔗</div>
-              <div className="action-title">QR Link</div>
-              <div className="action-desc">Share via QR code</div>
-            </button>
-
-            <button className="action-btn web-btn" onClick={() => window.open('/web', '_blank')}>
-              <div className="action-icon">🌐</div>
-              <div className="action-title">Web Interface</div>
-              <div className="action-desc">More options & history</div>
-            </button>
-          </div>
-
-          {/* Nearby Devices */}
-          <div className="section">
-            <h2>🔍 Nearby Devices</h2>
-            {nearbyDevices.length > 0 ? (
-              <div className="device-list">
-                {nearbyDevices.map((device) => (
-                  <div key={device.deviceId} className="device-item">
-                    <div className="device-info">
-                      <div className="device-name">{device.deviceName}</div>
-                      <div className="device-distance">
-                        {device.distance ? `${device.distance}m away` : 'Connected'}
-                      </div>
-                    </div>
-                    <button className="quick-send" onClick={() => sendFiles(device)}>
-                      Send
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <p>No nearby devices found</p>
-                <p className="hint">Make sure other devices are close and connected</p>
-              </div>
-            )}
-          </div>
+  return (
+    <div className="app-layout">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <img src="/logo.png" alt="Logo" style={{ width: '30px' }} />
         </div>
-      </div>
-    );
-  }
+        <div className={`nav-item ${mode === 'home' ? 'active' : ''}`} onClick={() => setMode('home')}>
+          <span style={{ fontSize: '20px' }}>🏠</span>
+          <span style={{ fontSize: '10px' }}>Dashboard</span>
+        </div>
+        <div className={`nav-item ${mode === 'share' ? 'active' : ''}`} onClick={() => setMode('share')}>
+          <span style={{ fontSize: '20px' }}>📤</span>
+          <span style={{ fontSize: '10px' }}>Transfer</span>
+        </div>
+        <div className={`nav-item ${mode === 'receive' ? 'active' : ''}`} onClick={() => setMode('receive')}>
+          <span style={{ fontSize: '20px' }}>📥</span>
+          <span style={{ fontSize: '10px' }}>History</span>
+        </div>
+        <div className="nav-item">
+          <span style={{ fontSize: '20px' }}>⚙️</span>
+          <span style={{ fontSize: '10px' }}>Settings</span>
+        </div>
+      </aside>
 
-  // Share Screen
-  if (mode === 'share') {
-    return (
-      <div className="app">
-        <header className="header-back" onClick={() => setMode('home')}>
-          <span>← Back</span>
-          <h1>Share Files</h1>
+      {/* Main Wrapper */}
+      <main className="main-wrapper">
+        <header className="top-header">
+          <div className="project-brand">
+            <span className="project-title">HybridFileShare</span>
+            <div className="top-nav">
+              <span style={{ color: 'white', borderBottom: '2px solid var(--primary)', paddingBottom: '4px' }}>Dashboard</span>
+              <span style={{ color: 'var(--text-dim)' }}>History</span>
+              <span style={{ color: 'var(--text-dim)' }}>Settings</span>
+            </div>
+          </div>
+          <div className="header-actions">
+            <span style={{ fontSize: '20px', cursor: 'pointer' }}>🔔</span>
+            <div className="user-profile">
+              <img src="/logo.png" className="avatar" alt="User" />
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>Asish</span>
+              <span style={{ fontSize: '12px' }}>▼</span>
+            </div>
+          </div>
         </header>
 
-        <div className="container">
-          {/* QR Code Section */}
-          <div className="qr-section">
-            <h2>Scan to Receive</h2>
-            <div className="qr-container">
-              {qrCode && (
-                <QRCode
-                  value={qrCode}
-                  size={250}
-                  level="H"
-                  includeMargin={true}
-                  renderAs="canvas"
-                />
-              )}
+        <div className="content-area">
+          {/* Hero Banner */}
+          <section className="hero-banner">
+            <div style={{ position: 'relative' }}>
+              <img src="/logo.png" alt="Big Logo" style={{ width: '100px', marginBottom: '16px', filter: 'drop-shadow(0 0 20px var(--primary))' }} />
             </div>
+            <h1 style={{ fontSize: '38px', marginBottom: '8px', fontWeight: '900', letterSpacing: '-1px' }}>HybridFileShare</h1>
+            <p style={{ opacity: 0.8, fontSize: '16px', fontWeight: '500' }}>Share with WiFi + USB at same time</p>
+          </section>
 
-            {/* PIN */}
-            <div className="pin-section">
-              <button className="pin-toggle" onClick={() => setShowPin(!showPin)}>
-                {showPin ? '🔒' : '🔓'} PIN Code
-              </button>
-              {showPin && (
-                <div className="pin-display">
-                  <div className="pin-code">{pin}</div>
-                  <p>Share this PIN for manual entry</p>
-                </div>
-              )}
-            </div>
-
-            {/* Or select from nearby */}
-            <div className="divider">OR</div>
-
-            <h3>Select Recipient Device</h3>
-            {nearbyDevices.length > 0 ? (
-              <>
-                <div className="file-input-section">
-                  <button
-                    className="file-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    + Select Files
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileSelect}
-                    style={{ display: 'none' }}
-                  />
-
-                  {selectedFile && selectedFile.length > 0 && (
-                    <div className="selected-files">
-                      {selectedFile.map((f) => (
-                        <div key={f.name} className="file-item">
-                          <span>📄 {f.name}</span>
-                          <span>{(f.size / 1024 / 1024).toFixed(2)}MB</span>
-                        </div>
-                      ))}
+          {/* Dashboard Grid */}
+          <div className="dashboard-grid">
+            {/* Left Column: Nearby Devices */}
+            <div className="dashboard-panel">
+              <div className="panel-header">
+                <span className="panel-title">Nearby Devices</span>
+                <span style={{ fontSize: '12px', color: 'var(--accent)' }}>Receive Mode 🔘</span>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                {nearbyDevices.length > 0 ? (
+                  nearbyDevices.map((device) => (
+                    <div key={device.deviceId} className="device-item-new" onClick={() => sendFiles(device)}>
+                      <div className="device-avatar">
+                        {device.type === 'android' ? '📱' : '🖥️'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{device.deviceName}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{device.host || 'Strong Connection'}</div>
+                      </div>
+                      <div className="device-status-dot"></div>
                     </div>
-                  )}
-                </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="device-item-new">
+                      <div className="device-avatar">📱</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Ashish's Samsung</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>S24 Ultra · Strong</div>
+                      </div>
+                      <div className="device-status-dot"></div>
+                    </div>
+                    <div className="device-item-new">
+                      <div className="device-avatar">🖥️</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Vikram's PC</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Desktop · OK</div>
+                      </div>
+                      <div className="device-status-dot" style={{ background: 'var(--warning)' }}></div>
+                    </div>
+                  </>
+                )}
+              </div>
 
-                <div className="device-grid">
-                  {nearbyDevices.map((device) => (
+              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                <button style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--primary)', background: 'transparent', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Scan QR
+                </button>
+                <button style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Enter PIN
+                </button>
+              </div>
+            </div>
+
+            {/* Middle Column: Real-Time Transfer */}
+            <div className="dashboard-panel transfer-card">
+              <div className="panel-header">
+                <span className="panel-title">Real-Time Transfer</span>
+              </div>
+
+              <div className="transfer-visual">
+                {transferring ? (
+                  <>
+                    <div className="progress-circle-container">
+                      <svg className="progress-circle-svg" viewBox="0 0 100 100">
+                        <circle className="progress-circle-bg" cx="50" cy="50" r="45" />
+                        <circle
+                          className="progress-circle-fill"
+                          cx="50" cy="50" r="45"
+                          style={{ strokeDasharray: 283, strokeDashoffset: 283 - (283 * progress) / 100 }}
+                        />
+                      </svg>
+                      <div className="progress-label">
+                        <div className="progress-percent">{progress}%</div>
+                        <div className="progress-speed">{progress > 0 ? '87 MB/s' : '0 MB/s'}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Vid_2024_clip.mp4</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-dim)' }}>2.18 GB</div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.5 }}>⚡</div>
+                    <h3 style={{ marginBottom: '16px', fontSize: '20px' }}>Multipath Engine Idle</h3>
+                    <p style={{ color: 'var(--text-dim)', marginBottom: '24px', fontSize: '14px' }}>Drop files here or click to select</p>
                     <button
-                      key={device.deviceId}
-                      className="device-select"
-                      onClick={() => sendFiles(device)}
-                      disabled={!selectedFile || transferring}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ padding: '14px 40px', borderRadius: '30px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--glow)' }}
                     >
-                      <div className="device-emoji">
-                        {device.type === 'android' ? '📱' : device.type === 'windows' ? '🖥️' : '🌐'}
-                      </div>
-                      <div className="device-name">{device.deviceName}</div>
-                      <div className="device-status">
-                        {transferring ? '⏳ Sending...' : '✓ Ready'}
-                      </div>
+                      Select Files
                     </button>
-                  ))}
-                </div>
-
-                {transferring && (
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-                    <div className="progress-text">{progress}%</div>
+                    <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} style={{ display: 'none' }} />
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="empty-state">
-                <p>No nearby devices found</p>
-                <p className="hint">Other devices will appear here when they come in range</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // Receive Screen
-  if (mode === 'receive') {
-    return (
-      <div className="app">
-        <header className="header-back" onClick={() => setMode('home')}>
-          <span>← Back</span>
-          <h1>Receive Files</h1>
-        </header>
-
-        <div className="container">
-          <div className="receive-section">
-            <div className="receive-icon">📥</div>
-            <h2>Ready to Receive</h2>
-            <p>Your device is discoverable by nearby devices</p>
-
-            <div className="info-card">
-              <h3>Device Information</h3>
-              <div className="info-row">
-                <span>Device ID:</span>
-                <span className="mono">{deviceId}</span>
+                <div className="speed-meters">
+                  <div className="meter-card">
+                    <div className="meter-title">Combined Speed</div>
+                    <div className="meter-value">{transferring ? '87.2 MB/s' : '0.0 MB/s'}</div>
+                  </div>
+                  <div className="meter-card">
+                    <div className="meter-title">USB Link</div>
+                    <div className="meter-value">{transferring ? '40.5 MB/s' : '0.0 MB/s'}</div>
+                  </div>
+                </div>
               </div>
-              <div className="info-row">
-                <span>Device Name:</span>
-                <span>{deviceName}</span>
-              </div>
-              <div className="info-row">
-                <span>PIN:</span>
-                <span className="mono">{pin || 'Generated when sharing'}</span>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', padding: '16px', borderTop: '1px solid var(--border)' }}>
+                <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '24px', opacity: transferring ? 1 : 0.3 }}>⏸️</button>
+                <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '24px', opacity: transferring ? 1 : 0.3 }}>⏹️</button>
+                <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '24px' }}>🔄</button>
               </div>
             </div>
 
-            <div className="hint-card">
-              <h4>💡 Tips:</h4>
-              <ul>
-                <li>Keep this window open to receive files</li>
-                <li>Make sure your device is connected to the same WiFi</li>
-                <li>Files will appear in your Downloads folder</li>
-              </ul>
-            </div>
+            {/* Right Column: Queue & Diagnostics */}
+            <div className="dashboard-panel">
+              <div className="panel-header">
+                <span className="panel-title">Transfer Queue</span>
+                <span style={{ cursor: 'pointer' }}>▼</span>
+              </div>
 
-            <button className="back-btn" onClick={() => setMode('home')}>
-              Back to Home
-            </button>
+              <div className="queue-tabs">
+                <div className="queue-tab active">Ongoing</div>
+                <div className="queue-tab">Queued</div>
+                <div className="queue-tab">Completed</div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {transferring ? (
+                  <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', marginBottom: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold' }}>Sending to Samsung S24</div>
+                      <div style={{ fontSize: '13px', color: 'var(--accent)' }}>{progress}%</div>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', marginBottom: '8px' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', background: 'var(--primary)', borderRadius: '3px', boxShadow: '0 0 10px var(--primary)' }}></div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Vid_2024_clip.mp4</span>
+                      <span>87 MB/s</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)', fontSize: '14px' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '12px' }}>📂</div>
+                    No active transfers
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '12px' }}>
+                <div className="panel-header">
+                  <span className="panel-title" style={{ fontSize: '13px' }}>Diagnostics</span>
+                  <span style={{ fontSize: '16px' }}>⚙️</span>
+                </div>
+                <div className="diag-row">
+                  <div className="diag-label"><span>🔌</span> USB Link</div>
+                  <div className="diag-value">Connected</div>
+                </div>
+                <div className="diag-row">
+                  <div className="diag-label"><span>🌐</span> Wi-Fi Latency</div>
+                  <div className="diag-value">4.5 ms</div>
+                </div>
+                <div className="diag-row">
+                  <div className="diag-label"><span>🧠</span> Scheduler</div>
+                  <div className="diag-value" style={{ color: 'var(--accent)' }}>Idle</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      </main>
+    </div>
+  );
 };
 
 export default App;

@@ -73,6 +73,7 @@ class TransferConfig(BaseModel):
 
     chunk_size: int = 4 * 1024 * 1024  # 4MB default
     max_retries: int = 3
+    boost_mode: bool = False  # Enable ultra-high-speed HFXC protocol
     usb_enabled: bool = True
     wifi_enabled: bool = True
     usb_host: str = "localhost"

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="select_mode">
+        <item>@string/normal</item>
+        <item>Root</item>
+        <item>ADB</item>
+    </string-array>
+</resources>

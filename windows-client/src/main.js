@@ -1,161 +1,171 @@
-// Tauri API imports
-// const { invoke } = window.__TAURI__.core;
+// HybridFileShare Main Controller
+// Unified Discovery & Multitrack Transfer Management
 
 // UI Elements
 const elements = {
-  percentText: document.getElementById('percent-text'),
-  progressRing: document.getElementById('progress-ring'),
-  usbSpeed: document.getElementById('usb-speed'),
-  wifiSpeed: document.getElementById('wifi-speed'),
-  chunkGrid: document.getElementById('chunk-grid'),
-  console: document.getElementById('console')
+  percentText: document.querySelector('.percent-val'),
+  progressRing: document.getElementById('main-progress-ring'),
+  speedText: document.querySelector('.speed-val'),
+  deviceList: document.getElementById('discovered-devices'),
+  brandTitle: document.querySelector('.brand-title'),
+  sidebarNav: document.querySelectorAll('.nav-item'),
+  activeTransferUI: document.getElementById('active-transfer-ui'),
+  idleStateUI: document.getElementById('idle-state-ui'),
+  fileName: document.querySelector('.file-name'),
+  fileSize: document.querySelector('.file-size')
 };
 
 // Initialize Lucide icons
-lucide.createIcons();
-
-// Generate Chunk Grid
-function initChunkGrid() {
-  elements.chunkGrid.innerHTML = '';
-  for (let i = 0; i < 200; i++) {
-    const chunk = document.createElement('div');
-    chunk.className = 'chunk';
-    if (i < 150) chunk.classList.add('completed');
-    if (i >= 150 && i < 160) chunk.classList.add('active');
-    elements.chunkGrid.appendChild(chunk);
-  }
+if (window.lucide) {
+  lucide.createIcons();
 }
 
-// Update UI Function
-function updateMetrics(data) {
-  elements.usbSpeed.textContent = `${data.usbSpeed.toFixed(1)} Mbps`;
-  elements.wifiSpeed.textContent = `${data.wifiSpeed.toFixed(1)} Mbps`;
+// Global State
+let state = {
+  discoveredDevices: [],
+  isTransferring: false,
+  progress: 76,
+  speed: 87,
+  currentView: 'dashboard'
+};
 
-  const percent = data.progress;
-  elements.percentText.textContent = `${percent}%`;
-
-  // Update progress ring (dasharray is 565)
-  const offset = 565 - (565 * percent) / 100;
-  elements.progressRing.style.strokeDashoffset = offset;
-}
-
-// Log Function
-function log(message) {
-  const time = new Date().toLocaleTimeString([], { hour12: false });
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.innerHTML = `<span class="log-time">${time}</span> <span>${message}</span>`;
-  elements.console.insertBefore(entry, elements.console.firstChild);
-}
-
-let currentTransfer = { active: false, totalBytes: 0, transferredBytes: 0, usbBytes: 0, wifiBytes: 0, lastUsb: 0, lastWifi: 0, speedInterval: null };
-
-function connectTelemetry() {
-  const socket = new WebSocket('ws://127.0.0.1:9002');
-
-  socket.onopen = () => {
-    log('Telemetry Engine Connected. Binding live metrics...');
-  };
-
-  socket.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-      if (msg.type === "TRANSFER_STARTED") {
-        currentTransfer.active = true;
-        currentTransfer.totalBytes = msg.data.size;
-        currentTransfer.transferredBytes = 0;
-        currentTransfer.usbBytes = 0;
-        currentTransfer.wifiBytes = 0;
-        log(`[CORE] Transfer initiated: ${msg.data.filename}`);
-        if (currentTransfer.speedInterval) clearInterval(currentTransfer.speedInterval);
-        currentTransfer.speedInterval = setInterval(calculateSpeeds, 1000);
-      }
-      if (msg.type === "CHUNK_COMPLETED") {
-        currentTransfer.transferredBytes += msg.data.bytes;
-        if (msg.data.channel === "usb") currentTransfer.usbBytes += msg.data.bytes;
-        else if (msg.data.channel === "wifi") currentTransfer.wifiBytes += msg.data.bytes;
-
-        const percent = Math.min(100, Math.floor((currentTransfer.transferredBytes / currentTransfer.totalBytes) * 100));
-        elements.percentText.textContent = `${percent}%`;
-
-        const offset = 565 - (565 * percent) / 100;
-        elements.progressRing.style.strokeDashoffset = offset;
-
-        // Visually complete a chunk on grid
-        const chunks = document.querySelectorAll('.chunk');
-        const cidx = msg.data.chunk_id % 200;
-        if (chunks[cidx]) {
-          chunks[cidx].classList.add('completed');
-        }
-      }
-      if (msg.type === "TRANSFER_COMPLETED") {
-        currentTransfer.active = false;
-        clearInterval(currentTransfer.speedInterval);
-        log(`[CORE] Transfer completed successfully.`);
-        updateMetrics({ usbSpeed: 0, wifiSpeed: 0, progress: 100 });
-      }
-    } catch (e) { }
-  };
-
-  socket.onclose = () => {
-    setTimeout(connectTelemetry, 5000);
-  };
-}
-
-function calculateSpeeds() {
-  if (!currentTransfer.active) return;
-  const deltaUsb = currentTransfer.usbBytes - currentTransfer.lastUsb;
-  const deltaWifi = currentTransfer.wifiBytes - currentTransfer.lastWifi;
-  currentTransfer.lastUsb = currentTransfer.usbBytes;
-  currentTransfer.lastWifi = currentTransfer.wifiBytes;
-  const usbspeed = deltaUsb / (1024 * 1024);
-  const wifispeed = deltaWifi / (1024 * 1024);
-  elements.usbSpeed.textContent = `${usbspeed.toFixed(1)} Mbps`;
-  elements.wifiSpeed.textContent = `${wifispeed.toFixed(1)} Mbps`;
-}
-
-connectTelemetry();
-
-// Navigation
-const navItems = document.querySelectorAll('.nav-item');
-navItems.forEach(item => {
+// --- View Switching ---
+elements.sidebarNav.forEach(item => {
   item.addEventListener('click', () => {
-    navItems.forEach(i => i.classList.remove('active'));
+    elements.sidebarNav.forEach(i => i.classList.remove('active'));
     item.classList.add('active');
-    const view = item.querySelector('span').textContent.toLowerCase();
-    switchView(view);
+    const view = item.getAttribute('data-view');
+    state.currentView = view;
+    console.log(`View switched to: ${view}`);
+    // In a real app, we would swap out panels here
   });
 });
 
-function switchView(view) {
-  log(`Switching view to: ${view.toUpperCase()}`);
-
-  const overview = document.getElementById('view-overview');
-  const analytics = document.getElementById('view-analytics');
-
-  if (view === 'overview') {
-    overview.style.display = 'grid';
-    analytics.style.display = 'none';
-  } else if (view === 'analytics') {
-    overview.style.display = 'none';
-    analytics.style.display = 'grid';
-  }
-}
-
-// System State
-async function checkSystem() {
+// --- Device Discovery ---
+async function fetchNearbyDevices() {
   try {
-    // Example of calling Rust command
-    // const devices = await window.__TAURI__.core.invoke('get_adb_devices');
-    // if (devices.length > 0) log(`ADB: Found ${devices.length} device(s)`);
-  } catch (e) {
-    console.error(e);
+    // Try to fetch from local API server
+    const response = await fetch('http://localhost:3000/api/discover-devices');
+    const devices = await response.json();
+    state.discoveredDevices = devices;
+    updateDeviceList();
+  } catch (error) {
+    console.debug('API Server not yet reachable, using mock devices...');
+    // Mock devices if server is down for demo
+    if (state.discoveredDevices.length === 0) {
+      state.discoveredDevices = [
+        { deviceId: 's24-u', deviceName: "Ashish's Samsung", platform: 'android', status: 'online', host: '192.168.1.5' },
+        { deviceId: 'win-pc', deviceName: "Vikram's PC", platform: 'win32', status: 'online', host: '192.168.1.10' }
+      ];
+      updateDeviceList();
+    }
   }
 }
 
-checkSystem();
-setInterval(checkSystem, 10000);
+function updateDeviceList() {
+  if (!elements.deviceList) return;
 
-// Initialize
-initChunkGrid();
-log('Mission Control initialized. Scanning for remote engine telemetry...');
+  elements.deviceList.innerHTML = '';
+  state.discoveredDevices.forEach(device => {
+    const item = document.createElement('div');
+    item.className = `device-item ${device.deviceId === 's24-u' ? 'active' : ''}`;
+
+    const iconSrc = '/assets/logo.png'; // Should use specific icons based on platform
+
+    item.innerHTML = `
+            <img src="${iconSrc}" class="device-icon" ${device.platform === 'win32' ? 'style="filter: hue-rotate(220deg);"' : ''}>
+            <div class="device-info">
+                <h4 class="device-name">${device.deviceName}</h4>
+                <p class="device-model">${device.platform === 'android' ? 'Android Device' : 'Windows Client'}</p>
+            </div>
+            <div class="device-status">
+                <div class="stat-dots">
+                    <span class="dot active"></span>
+                    <span class="dot ${device.status === 'online' ? 'active' : ''}"></span>
+                </div>
+                <span class="stat-text">${device.status === 'online' ? 'Strong' : 'Offline'}</span>
+            </div>
+        `;
+
+    item.onclick = () => {
+      document.querySelectorAll('.device-item').forEach(d => d.classList.remove('active'));
+      item.classList.add('active');
+      console.log(`Target device selected: ${device.deviceName}`);
+    };
+
+    elements.deviceList.appendChild(item);
+  });
+}
+
+// --- Transfer Management ---
+function updateProgress(percent, mbps) {
+  state.progress = percent;
+  state.speed = mbps;
+
+  if (elements.percentText) elements.percentText.textContent = `${percent}%`;
+  if (elements.speedText) elements.speedText.textContent = `${mbps} MB/s`;
+
+  if (elements.progressRing) {
+    // circumference of r=45 is ~283
+    const offset = 283 - (283 * percent) / 100;
+    elements.progressRing.style.strokeDashoffset = offset;
+  }
+}
+
+// --- Multichannel Telemetry ---
+function connectTelemetry() {
+  // Connect to the engine's WebSocket for live progress
+  const ws = new WebSocket('ws://localhost:9002');
+
+  ws.onopen = () => {
+    console.log('✅ Multitrack Engine Connected');
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'TRANSFER_PROGRESS') {
+        updateProgress(msg.progress, msg.speed);
+        // Update specific channel speeds if available
+        if (msg.usbSpeed) {
+          const usbSpeedEl = document.getElementById('usb-speed');
+          if (usbSpeedEl) usbSpeedEl.textContent = `${msg.usbSpeed} MB/s`;
+        }
+      }
+    } catch (e) {
+      console.error('Telemetry parse error', e);
+    }
+  };
+
+  ws.onclose = () => {
+    setTimeout(connectTelemetry, 3000);
+  };
+}
+
+// --- Initialization ---
+function init() {
+  console.log('🚀 HybridFileShare Multitrack Interface Initializing...');
+
+  // Start discovery loops
+  fetchNearbyDevices();
+  setInterval(fetchNearbyDevices, 5000);
+
+  // Connect telemetry
+  connectTelemetry();
+
+  // Simulated live progress for teaser
+  let p = 76;
+  setInterval(() => {
+    if (p < 100) {
+      p += 0.1;
+      updateProgress(Math.floor(p), 87 + Math.floor(Math.random() * 5));
+    } else {
+      p = 0;
+    }
+  }, 400);
+
+  // Initial icon refresh
+  if (window.lucide) lucide.createIcons();
+}
+
+document.addEventListener('DOMContentLoaded', init);

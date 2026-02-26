@@ -22,6 +22,18 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags("")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
     }
 
     buildTypes {
@@ -42,6 +54,8 @@ android {
     }
     buildFeatures {
         compose = true
+        aidl = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
@@ -68,6 +82,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.material)
+    implementation(libs.appcompat)
+    implementation("androidx.cardview:cardview:1.0.0")
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
@@ -98,4 +114,9 @@ dependencies {
 
     // QR Code Generation
     implementation("com.google.zxing:core:3.5.2")
+
+    // HybridFileXfer Dependencies
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("io.github.l4digital:fastscroll:2.1.0")
 }

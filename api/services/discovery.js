@@ -1,29 +1,25 @@
-/**
- * Device Discovery Service
- * Handles local network device detection using mDNS/Bonjour
- * Enables offline device detection on same WiFi network
- */
-
 import os from 'os';
 import { EventEmitter } from 'events';
+import { Bonjour } from 'bonjour-service';
 
 export class DeviceDiscovery extends EventEmitter {
   constructor(deviceId, deviceName = null) {
     super();
-    
+
     this.deviceId = deviceId;
-    this.deviceName = deviceName || `HybridLink-${os.hostname()}`;
+    this.deviceName = deviceName || `HybridFileShare-${os.hostname()}`;
     this.platform = process.platform;
     this.version = '1.0.0';
     this.port = 9002;
-    
+    this.serviceType = 'hybridfileshare';
+
+    this.bonjour = new Bonjour();
     this.service = null;
     this.browser = null;
     this.discoveredDevices = new Map();
-    
-    // Keep track of heartbeats
+
+    // Heartbeats
     this.heartbeats = new Map();
-    this.heartbeatInterval = 30000; // 30 seconds
   }
 
   /**
@@ -32,7 +28,23 @@ export class DeviceDiscovery extends EventEmitter {
   async startBroadcasting() {
     return new Promise((resolve) => {
       try {
-        console.log(`✅ Broadcasting: ${this.deviceName} on port ${this.port}`);
+        console.log(`✅ Advertising: ${this.deviceName} [${this.deviceId}]`);
+
+        this.service = this.bonjour.publish({
+          name: this.deviceName,
+          type: this.serviceType,
+          port: this.port,
+          txt: {
+            deviceId: this.deviceId,
+            platform: this.platform,
+            version: this.version
+          }
+        });
+
+        this.service.on('up', () => {
+          console.log(`🚀 Service is live: ${this.service.name}`);
+        });
+
         this.emit('broadcasting', { deviceId: this.deviceId, name: this.deviceName });
         resolve();
       } catch (error) {
@@ -48,7 +60,41 @@ export class DeviceDiscovery extends EventEmitter {
   async startScanning() {
     return new Promise((resolve) => {
       try {
-        console.log('🔍 Device discovery service ready');
+        console.log('🔍 Scanning for nearby multitrack devices...');
+
+        this.browser = this.bonjour.find({ type: this.serviceType });
+
+        this.browser.on('up', (service) => {
+          const deviceId = service.txt?.deviceId || service.name;
+          if (deviceId === this.deviceId) return;
+
+          const host = service.addresses?.[0] || service.referer?.address || 'unknown';
+          const device = {
+            deviceId: deviceId,
+            deviceName: service.txt?.deviceName || service.name,
+            host: host,
+            port: service.port,
+            platform: service.txt?.platform || 'unknown',
+            status: 'online',
+            timestamp: Date.now()
+          };
+
+          this.discoveredDevices.set(deviceId, device);
+          console.log(`✨ Device appeared: ${device.deviceName} (${device.host})`);
+          this.emit('deviceAppeared', device);
+        });
+
+        this.browser.on('down', (service) => {
+          const deviceId = service.txt?.deviceId || service.name;
+          const device = this.discoveredDevices.get(deviceId);
+          if (device) {
+            device.status = 'offline';
+            device.timestamp = Date.now();
+            console.log(`👋 Device disappeared: ${device.deviceName}`);
+            this.emit('deviceDisappeared', device);
+          }
+        });
+
         resolve();
       } catch (error) {
         console.error('❌ Failed to start scanning:', error);
@@ -57,99 +103,26 @@ export class DeviceDiscovery extends EventEmitter {
     });
   }
 
-  /**
-   * Get all discovered devices
-   */
   getNearbyDevices() {
-    return Array.from(this.discoveredDevices.values()).sort((a, b) => {
-      if (a.status !== b.status) {
-        return a.status === 'online' ? -1 : 1;
-      }
-      return b.timestamp - a.timestamp;
-    });
+    return Array.from(this.discoveredDevices.values())
+      .map(d => ({
+        ...d,
+        isStale: (Date.now() - d.timestamp) > 60000 // 60 sec stale
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  /**
-   * Get a specific device by ID
-   */
-  getDevice(deviceId) {
-    return this.discoveredDevices.get(deviceId);
-  }
-
-  /**
-   * Get online devices only
-   */
-  getOnlineDevices() {
-    return this.getNearbyDevices().filter(d => d.status === 'online');
-  }
-
-  /**
-   * Check if a device is reachable
-   */
-  async isReachable(deviceId) {
-    const device = this.getDevice(deviceId);
-    if (!device) return false;
-    return true;
-  }
-
-  /**
-   * Stop discovery completely
-   */
   stop() {
-    this.heartbeats.forEach(timeout => clearTimeout(timeout));
-    this.heartbeats.clear();
+    if (this.service) this.service.stop();
+    if (this.browser) this.browser.stop();
+    this.bonjour.destroy();
     console.log('🛑 Device discovery stopped');
     this.emit('stopped');
   }
-
-  /**
-   * Get statistics about discovered devices
-   */
-  getStats() {
-    const devices = this.getNearbyDevices();
-    return {
-      total: devices.length,
-      online: devices.filter(d => d.status === 'online').length,
-      offline: devices.filter(d => d.status === 'offline').length,
-      platforms: {
-        web: devices.filter(d => d.platform === 'win32').length,
-        android: devices.filter(d => d.platform === 'android').length,
-        ios: devices.filter(d => d.platform === 'ios').length,
-        linux: devices.filter(d => d.platform === 'linux').length,
-        darwin: devices.filter(d => d.platform === 'darwin').length,
-        unknown: devices.filter(d => !['win32', 'android', 'ios', 'linux', 'darwin'].includes(d.platform)).length
-      }
-    };
-  }
-
-  /**
-   * Clear offline devices older than specified time
-   */
-  clearStaleDevices(ageMs = 5 * 60 * 1000) {
-    const now = Date.now();
-    const stale = [];
-
-    for (const [id, device] of this.discoveredDevices.entries()) {
-      if (device.status === 'offline' && (now - device.timestamp) > ageMs) {
-        this.discoveredDevices.delete(id);
-        stale.push(device);
-      }
-    }
-
-    if (stale.length > 0) {
-      console.log(`🧹 Cleared ${stale.length} stale devices`);
-      this.emit('devicesCleared', stale);
-    }
-
-    return stale;
-  }
 }
 
-/**
- * Singleton instance
- */
+// Singleton helper
 let discoveryInstance = null;
-
 export function getDiscoveryService(deviceId, deviceName) {
   if (!discoveryInstance) {
     discoveryInstance = new DeviceDiscovery(deviceId, deviceName);

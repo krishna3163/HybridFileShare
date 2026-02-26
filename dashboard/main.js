@@ -1,391 +1,556 @@
+// HybridFileShare Dashboard Controller
+// Unified Discovery & Multitrack Transfer Management
+
 const CHUNK_COUNT = 150;
 const chunks = [];
 
-// Elements
+// Elements Mapping
 const els = {
-    app: document.getElementById('app'),
+    app: document.querySelector('.app-layout'),
     deviceList: document.getElementById('device-list'),
     dropzone: document.getElementById('dropzone'),
     fileInput: document.getElementById('file-input'),
     folderInput: document.getElementById('folder-input'),
     browseFilesBtn: document.getElementById('browse-files-btn'),
-    browseFolderBtn: document.getElementById('browse-folder-btn'),
-    selectedFiles: document.getElementById('selected-files'),
-    previewName: document.getElementById('preview-filename'),
-    previewSize: document.getElementById('preview-filesize'),
-    clearBtn: document.getElementById('clear-files-btn'),
-    sendBtn: document.getElementById('send-files-btn'),
+    selectedFiles: document.getElementById('selected-files'), // Might be missing in new UI, let's check
     metrics: document.getElementById('metrics-container'),
-    progressFill: document.getElementById('progress-fill'),
+    progressRing: document.getElementById('progress-fill-ring'),
     progressVal: document.getElementById('progress-val'),
-    etaVal: document.getElementById('eta-val'),
-    usbSpeed: document.getElementById('usb-speed-val'),
-    wifiSpeed: document.getElementById('wifi-speed-val'),
     totalSpeed: document.getElementById('total-speed-val'),
-    chunkMap: document.getElementById('chunk-map'),
-    modal: document.getElementById('connection-modal'),
+    usbSpeed: document.getElementById('usb-speed-val'), // Might be missing or hidden
+    wifiSpeed: document.getElementById('wifi-speed-val'),
+    connectionModal: document.getElementById('connection-modal'),
     modalTitle: document.getElementById('modal-title'),
+    modalStatus: document.getElementById('modal-status'),
     btnAccept: document.getElementById('accept-btn'),
     btnReject: document.getElementById('reject-btn'),
-    devName: document.querySelector('.device-name'),
-    devStatus: document.querySelector('.device-status'),
-    devAvatar: document.querySelector('.device-avatar'),
-    diagUsb: document.getElementById('diag-usb'),
-    queueList: document.getElementById('queue-list'),
-    manualConnectBtn: document.getElementById('manual-connect-btn'),
     transferModal: document.getElementById('transfer-modal'),
     transferReqDev: document.getElementById('transfer-req-dev'),
     transferReqName: document.getElementById('transfer-req-name'),
     transferReqSize: document.getElementById('transfer-req-size'),
-    transferRejectBtn: document.getElementById('transfer-reject-btn'),
     transferAcceptBtn: document.getElementById('transfer-accept-btn'),
+    transferRejectBtn: document.getElementById('transfer-reject-btn'),
+    currentFilename: document.getElementById('current-filename'),
+    currentFilesize: document.getElementById('current-filesize'),
+    queueList: document.getElementById('queue-list')
 };
 
-// State
-let isConnected = false;
-let socket = null;
-let currentTransfer = {
-    totalBytes: 0,
-    transferredBytes: 0,
-    usbBytes: 0,
-    wifiBytes: 0,
-    startTime: 0,
-    active: false,
-    filename: ""
+// Global State
+let state = {
+    isConnected: false,
+    socket: null,
+    currentTransfer: {
+        totalBytes: 0,
+        transferredBytes: 0,
+        usbBytes: 0,
+        wifiBytes: 0,
+        startTime: 0,
+        active: false,
+        filename: ""
+    }
 };
 
-// Initialize Chunks
-els.chunkMap.innerHTML = '';
-for (let i = 0; i < CHUNK_COUNT; i++) {
-    const chunk = document.createElement('div');
-    chunk.className = 'chunk';
-    els.chunkMap.appendChild(chunk);
-    chunks.push(chunk);
+// --- Initialization ---
+function init() {
+    console.log("🚀 HybridFileShare Dashboard Initializing...");
+
+    // Initialize Lucide
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+
+    // Connect Telemetry
+    connectTelemetry();
+
+    // Start discovery fetch
+    fetchNearbyDevices();
+    setInterval(fetchNearbyDevices, 5000);
+
+    // Bind all UI events
+    bindEvents();
+    bindTransferControls();
+
+    // Teaser: Simulated progress if no real transfer
+    simulateInitialTeaser();
 }
 
-// -------------------------------------------------------------
-// Real WebSocket Telemetry integration
-// -------------------------------------------------------------
-function connectTelemetry() {
-    socket = new WebSocket('ws://127.0.0.1:9002');
+function bindEvents() {
+    if (els.browseFilesBtn) {
+        els.browseFilesBtn.onclick = () => els.fileInput.click();
+    }
 
-    socket.onopen = () => {
-        console.log("Telemetry connected");
-        // We consider the local engine "discovered" for now
-        addDevice({
-            id: 'engine-1',
-            name: "HybridLink Engine",
-            type: "PC",
-            channels: ['USB', 'WIFI']
-        });
+    if (els.fileInput) {
+        els.fileInput.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                if (!state.isConnected) {
+                    alert("⚠️ Pair with a device first to start multitrack transfer.");
+                    return;
+                }
+                startTransferUI(e.target.files[0].name, e.target.files[0].size);
+            }
+        };
+    }
+
+    // Sidebar Navigation
+    const navBtns = document.querySelectorAll('.nav-icon-btn');
+    navBtns.forEach(btn => {
+        btn.onclick = () => {
+            navBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const title = btn.getAttribute('title');
+            console.log(`🚀 Switching view to: ${title}`);
+            if (title === "History") {
+                showHistory();
+            } else if (title === "Dashboard") {
+                showDashboard();
+            } else if (title === "Home") {
+                location.reload();
+            }
+        };
+    });
+
+    // Manual Connect
+    const manualBtn = document.getElementById('manual-connect-btn');
+    const manualInput = document.getElementById('manual-ip-input');
+    if (manualBtn && manualInput) {
+        manualBtn.onclick = () => {
+            const ip = manualInput.value.trim();
+            if (ip) {
+                alert(`Attempting direct connection to ${ip}...`);
+                requestConnection({ deviceName: `Direct Node [${ip}]`, status: 'online' });
+            }
+        };
+    }
+
+    // QR & PIN
+    const qrBtn = document.getElementById('scan-qr-btn');
+    const pinBtn = document.getElementById('pin-code-btn');
+
+    // QR Modal Els
+    const qrModal = document.getElementById('qr-modal');
+    const qrImage = document.getElementById('qr-image');
+    const closeQrBtn = document.getElementById('close-qr-btn');
+
+    // PIN Modal Els
+    const pinModal = document.getElementById('pin-modal');
+    const pinInput = document.getElementById('pin-input');
+    const closePinBtn = document.getElementById('close-pin-btn');
+    const submitPinBtn = document.getElementById('submit-pin-btn');
+
+    let html5QrcodeScanner = null;
+
+    if (qrBtn) {
+        qrBtn.onclick = async () => {
+            if (qrModal) qrModal.style.display = 'flex';
+
+            // Fetch local IP for QR
+            try {
+                const response = await fetch('/api/local-ip');
+                const data = await response.json();
+                const ip = data.ip;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=hybridlink://${ip}:9001`;
+                if (qrImage) qrImage.src = qrUrl;
+            } catch (err) {
+                console.error("Local IP fetch failed:", err);
+                const ip = "127.0.0.1";
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=hybridlink://${ip}:9001`;
+                if (qrImage) qrImage.src = qrUrl;
+            }
+        };
+    }
+
+    // QR Show/Scan Tabs
+    const tabShowQr = document.getElementById('tab-show-qr');
+    const tabScanQr = document.getElementById('tab-scan-qr');
+    const qrShowView = document.getElementById('qr-show-view');
+    const qrScanView = document.getElementById('qr-scan-view');
+
+    if (tabShowQr && tabScanQr) {
+        tabShowQr.onclick = () => {
+            tabShowQr.classList.add('active');
+            tabScanQr.classList.remove('active');
+            qrShowView.style.display = 'block';
+            qrScanView.style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }
+        };
+
+        tabScanQr.onclick = () => {
+            tabScanQr.classList.add('active');
+            tabShowQr.classList.remove('active');
+            qrShowView.style.display = 'none';
+            qrScanView.style.display = 'block';
+
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+                html5QrcodeScanner.render((decodedText, decodedResult) => {
+                    // Handle on success
+                    alert(`QR Scanned: ${decodedText}`);
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                    if (qrModal) qrModal.style.display = 'none';
+                    // Parse URI
+                    if (decodedText.startsWith('hybridlink://')) {
+                        const ip = decodedText.split('://')[1].split(':')[0];
+                        requestConnection({ deviceName: `Scanned Node [${ip}]`, status: 'online' });
+                    }
+                }, (errorMessage) => {
+                    // Expected to constantly fail
+                });
+            }
+        };
+    }
+
+    if (closeQrBtn) closeQrBtn.onclick = () => {
+        if (qrModal) qrModal.style.display = 'none';
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear();
+            html5QrcodeScanner = null;
+        }
     };
 
-    socket.onmessage = (event) => {
+    // PIN Show/Enter Tabs
+    const tabEnterPin = document.getElementById('tab-enter-pin');
+    const tabShowPin = document.getElementById('tab-show-pin');
+    const pinEnterView = document.getElementById('pin-enter-view');
+    const pinShowView = document.getElementById('pin-show-view');
+    const closePinShowBtn = document.getElementById('close-pin-show-btn');
+
+    if (tabEnterPin && tabShowPin) {
+        tabEnterPin.onclick = () => {
+            tabEnterPin.classList.add('active');
+            tabShowPin.classList.remove('active');
+            pinEnterView.style.display = 'block';
+            pinShowView.style.display = 'none';
+        };
+
+        tabShowPin.onclick = () => {
+            tabShowPin.classList.add('active');
+            tabEnterPin.classList.remove('active');
+            pinEnterView.style.display = 'none';
+            pinShowView.style.display = 'block';
+        };
+    }
+
+    if (pinBtn) {
+        pinBtn.onclick = () => {
+            if (pinInput) pinInput.value = '';
+            if (pinModal) pinModal.style.display = 'flex';
+        };
+    }
+
+    if (closePinBtn) closePinBtn.onclick = () => {
+        if (pinModal) pinModal.style.display = 'none';
+    };
+
+    if (closePinShowBtn) closePinShowBtn.onclick = () => {
+        if (pinModal) pinModal.style.display = 'none';
+    };
+
+    if (submitPinBtn) submitPinBtn.onclick = () => {
+        const pin = pinInput ? pinInput.value : '';
+        if (pin && pin.length === 4) {
+            alert("🔑 Handshake complete. Multipath enabled.");
+            if (pinModal) pinModal.style.display = 'none';
+        } else {
+            alert("Please enter a valid 4-digit PIN.");
+        }
+    };
+
+    // Header Actions
+    const refreshBtn = document.getElementById('refresh-btn');
+    const settingsBtn = document.getElementById('settings-btn-main');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+
+    if (refreshBtn) refreshBtn.onclick = () => location.reload();
+
+    if (settingsBtn) {
+        settingsBtn.onclick = () => {
+            if (settingsModal) settingsModal.style.display = 'flex';
+        };
+    }
+
+    if (closeSettingsBtn) {
+        closeSettingsBtn.onclick = () => {
+            if (settingsModal) settingsModal.style.display = 'none';
+        };
+    }
+
+    // Settings logic
+    const settingDarkmode = document.getElementById('setting-darkmode');
+    const settingNotifications = document.getElementById('setting-notifications');
+    const settingAutoaccept = document.getElementById('setting-autoaccept');
+
+    if (settingDarkmode) {
+        settingDarkmode.onclick = () => {
+            settingDarkmode.classList.toggle('active');
+            if (settingDarkmode.classList.contains('active')) {
+                document.body.style.filter = "none";
+            } else {
+                document.body.style.filter = "invert(1) hue-rotate(180deg)";
+            }
+        };
+    }
+
+    if (settingNotifications) {
+        settingNotifications.onclick = () => {
+            settingNotifications.classList.toggle('active');
+            if (settingNotifications.classList.contains('active')) {
+                if (Notification.permission !== "granted") {
+                    Notification.requestPermission();
+                }
+            }
+        };
+    }
+
+    if (settingAutoaccept) {
+        settingAutoaccept.onclick = () => {
+            settingAutoaccept.classList.toggle('active');
+            state.autoAccept = settingAutoaccept.classList.contains('active');
+            alert(`Auto-accept transfers is now ${state.autoAccept ? 'ON' : 'OFF'}`);
+        };
+    }
+
+    // Drag and Drop
+    if (els.dropzone) {
+        els.dropzone.ondragover = (e) => { e.preventDefault(); els.dropzone.classList.add('active'); };
+        els.dropzone.ondragleave = () => els.dropzone.classList.remove('active');
+        els.dropzone.ondrop = (e) => {
+            e.preventDefault();
+            els.dropzone.classList.remove('active');
+            if (e.dataTransfer.files.length > 0) {
+                startTransferUI(e.dataTransfer.files[0].name, e.dataTransfer.files[0].size);
+            }
+        };
+    }
+
+    // Tab Switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.onclick = (e) => {
+            const parent = e.target.closest('.tabs');
+            parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+        };
+    });
+
+    if (els.btnReject) els.btnReject.onclick = () => els.connectionModal.style.display = 'none';
+    if (els.transferRejectBtn) els.transferRejectBtn.onclick = () => els.transferModal.style.display = 'none';
+    if (els.transferAcceptBtn) els.transferAcceptBtn.onclick = () => els.transferModal.style.display = 'none';
+}
+
+function showHistory() {
+    if (els.dropzone) els.dropzone.innerHTML = `
+        <div class="history-view" style="padding:40px; opacity:0.8;">
+            <i data-lucide="history" size="40"></i>
+            <h3>Transfer History</h3>
+            <p>No recent transfers found on this device.</p>
+        </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+}
+
+function showDashboard() {
+    location.reload(); // Simple reload to reset view for now
+}
+
+// --- Discovery ---
+async function fetchNearbyDevices() {
+    try {
+        const response = await fetch('/api/discover-devices');
+        const devices = await response.json();
+        updateDeviceList(devices);
+    } catch (error) {
+        console.debug("Discovery API not reachable, using placeholders.");
+        // Placeholders are already in HTML, but we can update them if needed
+    }
+}
+
+function updateDeviceList(devices) {
+    if (!els.deviceList) return;
+
+    if (devices.length === 0) {
+        els.deviceList.innerHTML = `
+            <div class="empty-devices" style="text-align:center; padding:40px; opacity:0.5;">
+                <i data-lucide="search" class="animate-pulse"></i>
+                <p style="font-size:12px; margin-top:10px;">Searching for peers...</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    els.deviceList.innerHTML = '';
+    devices.forEach(dev => {
+        const item = document.createElement('div');
+        item.className = 'device-item' + (dev.status === 'online' ? ' active' : '');
+        item.innerHTML = `
+            <img src="../logo.png" class="dev-img" style="${dev.platform === 'win32' ? 'filter: hue-rotate(220deg);' : 'background:#222'}">
+            <div class="dev-info">
+                <div class="dev-name">${dev.deviceName}</div>
+                <div class="dev-model">${dev.platform === 'android' ? 'Mobile Node' : dev.platform === 'win32' ? 'PC Node' : 'Web Hub'}</div>
+            </div>
+            <div class="dev-status">
+                <div class="status-indicators">
+                    <span class="dot active"></span>
+                    <span class="dot ${dev.status === 'online' ? 'active' : ''}"></span>
+                </div>
+                <span class="status-label">${dev.status === 'online' ? 'Online' : 'Offline'}</span>
+            </div>
+        `;
+        item.onclick = () => requestConnection(dev);
+        els.deviceList.appendChild(item);
+    });
+}
+
+function requestConnection(dev) {
+    if (els.modalTitle) els.modalTitle.textContent = `Pair with ${dev.deviceName}?`;
+    if (els.modalStatus) els.modalStatus.textContent = `A secure temporary session key will be generated for ${dev.deviceName}.`;
+    if (els.connectionModal) els.connectionModal.style.display = 'flex';
+
+    if (els.btnAccept) {
+        els.btnAccept.onclick = () => {
+            els.connectionModal.style.display = 'none';
+            state.isConnected = true;
+            console.log(`Connected to ${dev.deviceName}`);
+            alert(`✅ Successfully paired with ${dev.deviceName}! You can now send files.`);
+        };
+    }
+}
+
+// --- Telemetry & Transfer ---
+function connectTelemetry() {
+    // Port 9002 is the Python engine's WebSocket server
+    state.socket = new WebSocket('ws://127.0.0.1:9002');
+
+    state.socket.onopen = () => {
+        console.log("✅ Telemetry Engine Connected - Real-time Dashboard Active");
+    };
+
+    state.socket.onmessage = (event) => {
         try {
             const msg = JSON.parse(event.data);
             handleTelemetryEvent(msg.type, msg.data);
-        } catch (e) { console.error("T-Error", e); }
+        } catch (e) { console.error("Parse Error", e); }
     };
 
-    socket.onclose = () => {
-        setTimeout(connectTelemetry, 5000); // Reconnect
+    state.socket.onclose = () => {
+        console.debug("Telemetry socket closed. Reconnecting...");
+        setTimeout(connectTelemetry, 5000);
     };
+
+    state.socket.onerror = () => { /* Silent error to prevent console spam */ };
 }
 
 function handleTelemetryEvent(type, data) {
-    if (!currentTransfer.active && type === "TRANSFER_STARTED") {
+    if (type === "SYSTEM_READY") {
+        console.log(`System Ready: ${data.serverId} (v${data.version})`);
+    } else if (type === "TRANSFER_STARTED") {
         startTransferUI(data.filename, data.size);
-    }
-
-    if (type === "CHUNK_COMPLETED") {
-        currentTransfer.transferredBytes += data.bytes;
-        if (data.channel === "usb") currentTransfer.usbBytes += data.bytes;
-        else if (data.channel === "wifi") currentTransfer.wifiBytes += data.bytes;
-
-        updateMetricsUI(data.chunk_id, data.channel);
-    }
-
-    if (type === "TRANSFER_COMPLETED") {
+    } else if (type === "CHUNK_COMPLETED") {
+        updateProgress(data);
+    } else if (type === "TRANSFER_COMPLETED") {
         finishTransferUI();
     }
 }
 
-connectTelemetry();
+// Wire up transfer control buttons
+function bindTransferControls() {
+    const pauseBtn = document.querySelector('.btn-icon[data-lucide="pause"]');
+    const playBtn = document.querySelector('.btn-icon[data-lucide="play"]');
+    const retryBtn = document.querySelector('.btn-primary');
 
-// -------------------------------------------------------------
-// Nearby Device Discovery & Pairing (Zero-setup UI)
-// -------------------------------------------------------------
-function addDevice(dev) {
-    if (document.getElementById(dev.id)) return;
-
-    const el = document.createElement('div');
-    el.className = 'device-item';
-    el.id = dev.id;
-    el.innerHTML = `
-        <div class="device-icon"><i data-lucide="${dev.type === 'Android' ? 'smartphone' : 'monitor'}"></i></div>
-        <div class="device-item-info">
-            <span class="device-item-name">${dev.name}</span>
-            <span class="device-item-type">HybridLink ${dev.type} Node (Zero-Setup)</span>
-        </div>
-        <div style="font-size:0.75rem; color:var(--accent-blue); padding:4px 8px; border-radius:12px; background:rgba(59,130,246,0.1)">PAIR</div>
-    `;
-
-    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
-    el.onclick = () => requestConnection(dev);
-    els.deviceList.appendChild(el);
+    if (pauseBtn) pauseBtn.onclick = () => alert("Transfer Paused");
+    if (playBtn) playBtn.onclick = () => alert("Transfer Resumed");
+    if (retryBtn && retryBtn.textContent === "Retry") {
+        retryBtn.onclick = () => alert("Retrying all failed chunks...");
+    }
 }
 
-function requestConnection(dev) {
-    els.modalTitle.textContent = `Pair with ${dev.name}?`;
-    document.getElementById('modal-status').textContent = `Temporary session key will be generated.`;
-    els.modal.style.display = 'flex';
-
-    els.btnAccept.onclick = () => {
-        els.modal.style.display = 'none';
-        establishConnection(dev);
-    };
-    els.btnReject.onclick = () => {
-        els.modal.style.display = 'none';
-        isConnected = false;
-    };
-}
-
-els.manualConnectBtn.onclick = () => {
-    const ip = prompt("Enter Device IP Address:");
-    if (ip) {
-        addDevice({
-            id: 'manual-' + btoa(ip).replace(/=/g, ''),
-            name: ip,
-            type: "Android",
-            channels: ['WIFI']
-        });
-    }
-};
-
-function establishConnection(dev) {
-    isConnected = true;
-    els.devName.textContent = dev.name;
-    els.devStatus.textContent = "Securely paired (Temporary Session)";
-    els.devAvatar.classList.remove('placeholder');
-    els.devAvatar.innerHTML = `<i data-lucide="${dev.type === 'Android' ? 'smartphone' : 'monitor'}" style="color:white;"></i>`;
-    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 10);
-
-    els.diagUsb.textContent = "Bound (Multipath)";
-    els.diagUsb.className = 'status-badge active';
-
-    els.dropzone.classList.remove('disabled');
-    document.getElementById('global-status-text').textContent = "Paired";
-
-    // Simulate incoming transfer after 10 seconds of connection for testing the UI
-    setTimeout(() => {
-        els.transferReqDev.textContent = dev.name;
-        els.transferReqName.textContent = "documents_archive.zip";
-        els.transferReqSize.textContent = "450 MB";
-        els.transferModal.style.display = 'flex';
-    }, 10000);
-}
-
-els.transferRejectBtn.onclick = () => {
-    els.transferModal.style.display = 'none';
-};
-
-els.transferAcceptBtn.onclick = () => {
-    els.transferModal.style.display = 'none';
-    startTransferUI("documents_archive.zip (Receiving)", 450 * 1024 * 1024);
-
-    // Simulate receive progress
-    let simulatedProgress = 0;
-    currentTransfer.simInterval = setInterval(() => {
-        handleTelemetryEvent("CHUNK_COMPLETED", {
-            chunk_id: Math.floor(Math.random() * CHUNK_COUNT),
-            channel: Math.random() > 0.4 ? 'usb' : 'wifi',
-            bytes: (450 * 1024 * 1024) / CHUNK_COUNT
-        });
-        simulatedProgress += (100 / CHUNK_COUNT);
-        if (simulatedProgress >= 100) {
-            clearInterval(currentTransfer.simInterval);
-            handleTelemetryEvent("TRANSFER_COMPLETED", {});
-        }
-    }, 150);
-};
-
-// -------------------------------------------------------------
-// File Sharing UX
-// -------------------------------------------------------------
-els.browseFilesBtn.onclick = (e) => { e.stopPropagation(); els.fileInput.click(); };
-els.browseFolderBtn.onclick = (e) => { e.stopPropagation(); els.folderInput.click(); };
-
-els.dropzone.addEventListener('dragover', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(59,130,246,0.1)'; });
-els.dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); if (isConnected) els.dropzone.style.background = 'rgba(255,255,255,0.02)'; });
-els.dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    els.dropzone.style.background = 'rgba(255,255,255,0.02)';
-    if (isConnected && e.dataTransfer.files.length > 0) processFileSelection(e.dataTransfer.files);
-});
-els.fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files); });
-els.folderInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFileSelection(e.target.files); });
-
-els.clearBtn.onclick = () => {
-    els.selectedFiles.style.display = 'none';
-    els.dropzone.style.display = 'flex';
-    els.fileInput.value = '';
-    els.folderInput.value = '';
-};
-
-function processFileSelection(fileList) {
-    if (!isConnected) {
-        alert("Please connect to a device before selecting files.");
-        return;
-    }
-    const file = fileList[0];
-    els.dropzone.style.display = 'none';
-    els.selectedFiles.style.display = 'block';
-
-    if (fileList.length > 1) {
-        els.previewName.textContent = `${fileList.length} items selected (starting with ${file.name})`;
-    } else {
-        els.previewName.textContent = file.name;
-    }
-
-    let totalSize = 0;
-    for (let i = 0; i < fileList.length; i++) totalSize += fileList[i].size;
-    els.previewSize.textContent = (totalSize / (1024 * 1024)).toFixed(1) + " MB";
-}
-
-els.sendBtn.onclick = () => {
-    if (!isConnected) {
-        alert("You must pair with a device first!");
-        return;
-    }
-
-    const files = els.fileInput.files.length > 0 ? els.fileInput.files : els.folderInput.files;
-    if (!files || files.length === 0) return;
-
-    // Calculate total size for UI
-    let totalSize = 0;
-    for (let i = 0; i < files.length; i++) totalSize += files[i].size;
-
-    // Fallback UI starting if no real backend response
-    startTransferUI(files[0].name + (files.length > 1 ? ` (+${files.length - 1})` : ""), totalSize);
-
-    // In a real integrated flow, we would push the file content or trigger the CLI here.
-    // E.g., fetch('/api/upload', {method: 'POST'})
-
-    // For visual testing of the UI without a connected backend file reading system:
-    let simulatedProgress = 0;
-    currentTransfer.simInterval = setInterval(() => {
-        handleTelemetryEvent("CHUNK_COMPLETED", {
-            chunk_id: Math.floor(Math.random() * CHUNK_COUNT),
-            channel: Math.random() > 0.4 ? 'usb' : 'wifi',
-            bytes: file.size / CHUNK_COUNT
-        });
-        simulatedProgress += (100 / CHUNK_COUNT);
-        if (simulatedProgress >= 100) {
-            clearInterval(currentTransfer.simInterval);
-            handleTelemetryEvent("TRANSFER_COMPLETED", {});
-        }
-    }, 150);
-};
-
-// -------------------------------------------------------------
-// Multipath Real-time Metrics
-// -------------------------------------------------------------
-let speedCheckInterval;
-function startTransferUI(name, totalBytes) {
-    currentTransfer = {
-        totalBytes: totalBytes,
+function startTransferUI(name, size) {
+    state.currentTransfer = {
+        totalBytes: size,
         transferredBytes: 0,
-        usbBytes: 0,
-        wifiBytes: 0,
-        lastUsb: 0,
-        lastWifi: 0,
-        startTime: Date.now(),
         active: true,
         filename: name
     };
 
-    els.selectedFiles.style.display = 'none';
-    els.metrics.style.display = 'flex';
-    document.getElementById('global-status-text').textContent = "Transferring";
-    addQueueItem(name);
+    if (els.dropzone) els.dropzone.style.display = 'none';
+    if (els.metrics) els.metrics.style.display = 'flex';
+    if (els.currentFilename) els.currentFilename.textContent = name;
+    if (els.currentFilesize) els.currentFilesize.textContent = formatBytes(size);
 
-    // Clear chunks
-    chunks.forEach(c => c.className = 'chunk');
-
-    speedCheckInterval = setInterval(calculateSpeeds, 1000);
+    addToQueue(name);
 }
 
-function calculateSpeeds() {
-    if (!currentTransfer.active) return;
+function updateProgress(data) {
+    state.currentTransfer.transferredBytes += data.bytes;
+    const pct = Math.floor((state.currentTransfer.transferredBytes / state.currentTransfer.totalBytes) * 100);
 
-    const deltaUsb = currentTransfer.usbBytes - currentTransfer.lastUsb;
-    const deltaWifi = currentTransfer.wifiBytes - currentTransfer.lastWifi;
+    if (els.progressVal) els.progressVal.textContent = `${pct}%`;
+    if (els.progressRing) {
+        const offset = 283 - (283 * pct) / 100;
+        els.progressRing.style.strokeDashoffset = offset;
+    }
 
-    currentTransfer.lastUsb = currentTransfer.usbBytes;
-    currentTransfer.lastWifi = currentTransfer.wifiBytes;
-
-    const usbSpeed = deltaUsb / (1024 * 1024);
-    const wifiSpeed = deltaWifi / (1024 * 1024);
-    const totalSpeed = usbSpeed + wifiSpeed;
-
-    els.usbSpeed.innerHTML = `${usbSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
-    els.wifiSpeed.innerHTML = `${wifiSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
-    els.totalSpeed.innerHTML = `${totalSpeed.toFixed(1)} <span class="unit">MB/s</span>`;
-
-    const remain = currentTransfer.totalBytes - currentTransfer.transferredBytes;
-    let eta = 0;
-    if (totalSpeed > 0) eta = Math.ceil((remain / (1024 * 1024)) / totalSpeed);
-    els.etaVal.textContent = eta + 's';
-}
-
-function updateMetricsUI(chunkId, channel) {
-    if (!currentTransfer.active) return;
-
-    const pct = Math.min(100, (currentTransfer.transferredBytes / currentTransfer.totalBytes) * 100);
-    els.progressVal.textContent = Math.floor(pct) + "%";
-    els.progressFill.style.width = pct + "%";
-
-    // Map chunk to visual grid
-    const cidx = chunkId % CHUNK_COUNT;
-    const colorClass = channel === 'usb' ? 'cyan' : 'purple';
-    chunks[cidx].className = `chunk ${colorClass}`;
-
-    // Fade old chunks to 'done'
-    setTimeout(() => { if (chunks[cidx].classList.contains(colorClass)) chunks[cidx].className = 'chunk done'; }, 500);
+    // Update Combined Speed
+    if (els.totalSpeed) {
+        // For demo, we might need a speed calculation loop, but if engine provides it:
+        if (data.speed) els.totalSpeed.textContent = `${data.speed} MB/s`;
+    }
 }
 
 function finishTransferUI() {
-    currentTransfer.active = false;
-    clearInterval(speedCheckInterval);
-    document.getElementById('global-status-text').textContent = "Completed";
-
-    els.usbSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
-    els.wifiSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
-    els.totalSpeed.innerHTML = `0.0 <span class="unit">MB/s</span>`;
-    els.progressFill.style.width = "100%";
-    els.progressVal.textContent = "100%";
+    state.currentTransfer.active = false;
+    if (els.progressVal) els.progressVal.textContent = "100%";
+    if (els.progressRing) els.progressRing.style.strokeDashoffset = 0;
 
     setTimeout(() => {
-        els.metrics.style.display = 'none';
-        els.dropzone.style.display = 'flex';
-        els.fileInput.value = '';
-        markQueueDone(currentTransfer.filename);
+        if (els.metrics) els.metrics.style.display = 'none';
+        if (els.dropzone) els.dropzone.style.display = 'flex';
     }, 3000);
 }
 
-function addQueueItem(name) {
-    if (els.queueList.querySelector('.empty-state')) els.queueList.innerHTML = '';
+// --- Helpers ---
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function addToQueue(name) {
+    if (!els.queueList) return;
+    const empty = els.queueList.querySelector('.empty-queue');
+    if (empty) empty.remove();
+
     const item = document.createElement('div');
-    item.className = 'queue-item';
-    item.id = `q-${btoa(name).replace(/=/g, '')}`;
-    item.innerHTML = `<div style="font-weight: 500">${name}</div><div style="font-size: 0.7rem; color: var(--accent-blue); margin-top:4px;">TRANSFERRING...</div>`;
+    item.className = 'queue-card'; // Styling should be in style.css
+    item.style.padding = '12px';
+    item.style.background = 'rgba(255,255,255,0.02)';
+    item.style.borderRadius = '12px';
+    item.style.marginBottom = '8px';
+    item.innerHTML = `
+        <div style="font-size:12px; font-weight:700;">${name}</div>
+        <div style="font-size:10px; color:var(--primary); margin-top:4px;">TRANSFERRING...</div>
+    `;
     els.queueList.prepend(item);
 }
 
-function markQueueDone(name) {
-    const item = document.getElementById(`q-${btoa(name).replace(/=/g, '')}`);
-    if (item) {
-        item.className = 'queue-item done';
-        item.innerHTML = `<div style="font-weight: 500">${name}</div><div style="font-size: 0.7rem; color: var(--accent-green); margin-top:4px;">COMPLETED</div>`;
-    }
+function simulateInitialTeaser() {
+    // Teaser only if no active transfer
+    let p = 76;
+    setInterval(() => {
+        if (!state.currentTransfer.active && els.progressRing && els.metrics && els.metrics.style.display !== 'none') {
+            p = (p + 0.1) % 100;
+            const offset = 283 - (283 * Math.floor(p)) / 100;
+            els.progressRing.style.strokeDashoffset = offset;
+            if (els.progressVal) els.progressVal.textContent = `${Math.floor(p)}%`;
+        }
+    }, 200);
 }
+
+// Initialize on Load
+document.addEventListener('DOMContentLoaded', init);

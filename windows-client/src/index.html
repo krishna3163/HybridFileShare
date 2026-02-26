@@ -3,209 +3,292 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HybridLink Mission Control</title>
+  <title>HybridFileShare | Multitrack Transfer</title>
   <link rel="stylesheet" href="/styles.css" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;600;800&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script type="module" src="/main.js" defer></script>
 </head>
 
 <body>
-  <div id="app">
+  <div class="app-layout">
+    <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="logo-area">
-        <img src="/assets/logo.png" alt="Logo"
-          style="width: 28px; height: 28px; margin-right: 12px; object-fit: contain;">
-        <div class="logo-text">HYBRIDLINK</div>
+      <div class="sidebar-logo">
+        <img src="/assets/logo.png" alt="Logo" style="width: 32px;" id="app-logo">
       </div>
-
-      <nav class="nav-section">
-        <div class="nav-label">Mission Control</div>
-        <div class="nav-item active">
-          <i data-lucide="layout-dashboard" size="18"></i>
-          <span>Overview</span>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-view="dashboard" title="Dashboard">
+          <i data-lucide="layout-grid"></i>
+          <span>Dashboard</span>
         </div>
-        <div class="nav-item">
-          <i data-lucide="send" size="18"></i>
-          <span>Send Files</span>
+        <div class="nav-item" data-view="home" title="Live Transfer">
+          <i data-lucide="home"></i>
+          <span>Home</span>
         </div>
-        <div class="nav-item">
-          <i data-lucide="bar-chart-3" size="18"></i>
-          <span>Analytics</span>
+        <div class="nav-item" data-view="history" title="History">
+          <i data-lucide="history"></i>
+          <span>History</span>
         </div>
-        <div class="nav-item">
-          <i data-lucide="settings" size="18"></i>
-          <span>Settings</span>
+        <div class="nav-item logout-btn" title="Exit">
+          <i data-lucide="log-out"></i>
         </div>
       </nav>
-
-      <div class="nav-label">Connected Devices</div>
-      <div class="device-card" style="position: relative; overflow: hidden;">
-        <div class="scan-indicator"></div>
-        <div class="device-status">
-          <div class="online-dot"></div>
-          <span>PIXEL 7 PRO</span>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-          Multipath (USB + WiFi + BT)
-        </div>
-      </div>
-
-      <div class="nav-label" style="margin-top: 2rem;">Nearby Radar</div>
-      <div class="radar-container">
-        <div class="radar-item">
-          <i data-lucide="smartphone" size="18" color="var(--hybrid-cyan)"></i>
-          <div style="font-size: 0.875rem; font-weight: 600;">Office Pixel</div>
-          <div class="transport-tags">
-            <span class="tag wifi">WiFi</span>
-            <span class="tag bt">BT</span>
-          </div>
-        </div>
-        <div class="radar-item">
-          <i data-lucide="laptop" size="18" color="var(--hybrid-purple)"></i>
-          <div style="font-size: 0.875rem; font-weight: 600;">Dev Rig</div>
-          <div class="transport-tags">
-            <span class="tag">USB</span>
-            <span class="tag wifi">WiFi</span>
-          </div>
-        </div>
-      </div>
     </aside>
 
-    <main class="main-content">
-      <header class="top-bar">
-        <input type="text" class="search-bar" placeholder="Search transfers..." />
-        <div class="controls">
-          <button class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-            <i data-lucide="plus" size="18"></i>
-            <span>New Task</span>
-          </button>
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="brand-section">
+          <h1 class="brand-title">HybridFileShare</h1>
+          <nav class="header-nav">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">History</a>
+            <a href="#">Settings</a>
+          </nav>
+        </div>
+        <div class="header-actions">
+          <div class="icon-btn"><i data-lucide="refresh-cw" size="18"></i></div>
+          <div class="icon-btn"><i data-lucide="bell" size="18"></i></div>
+          <div class="icon-btn"><i data-lucide="settings" size="18"></i></div>
+          <div class="user-pill">
+            <img src="/assets/logo.png" alt="User" class="avatar">
+            <span class="username">Asish</span>
+            <i data-lucide="chevron-down" size="14"></i>
+          </div>
+          <div class="menu-btn"><i data-lucide="menu"></i></div>
         </div>
       </header>
 
-      <section class="dashboard-grid" id="view-overview">
-        <div class="transfer-monitor">
-          <div class="card">
-            <div class="progress-hero">
-              <div class="progress-ring-container">
-                <svg width="200" height="200" viewBox="0 0 200 200">
-                  <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="12" />
-                  <circle id="progress-ring" cx="100" cy="100" r="90" fill="none" stroke="url(#cyan-purple)"
-                    stroke-width="12" stroke-dasharray="565" stroke-dashoffset="140" stroke-linecap="round"
-                    transform="rotate(-90 100 100)" />
-                  <defs>
-                    <linearGradient id="cyan-purple" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stop-color="#00F2FF" />
-                      <stop offset="100%" stop-color="#A855F7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div class="progress-label">
-                  <div class="progress-value" id="percent-text">75%</div>
-                  <div class="progress-subtext">Completed</div>
+      <div class="content-area">
+        <!-- Hero Section -->
+        <section class="hero-banner">
+          <div class="hero-content">
+            <div class="hero-visual">
+              <div class="logo-glow"></div>
+              <img src="/assets/logo.png" alt="HybridFileShare Logo" class="big-logo">
+            </div>
+            <h2 class="hero-title">HybridFileShare</h2>
+            <p class="hero-subtitle">Share with WiFi + USB at same time</p>
+          </div>
+        </section>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+          <!-- Left Column: Nearby Devices -->
+          <div class="panel nearby-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Nearby Devices</h3>
+              <div class="toggle-group">
+                <span class="toggle-label">Receive Mode</span>
+                <div class="toggle-switch active"></div>
+              </div>
+            </div>
+            <div class="device-list" id="discovered-devices">
+              <!-- Discovered devices will be injected here -->
+              <div class="device-item active">
+                <img src="/assets/logo.png" class="device-icon">
+                <div class="device-info">
+                  <h4 class="device-name">Ashish's Samsung</h4>
+                  <p class="device-model">S24 Ultra</p>
+                </div>
+                <div class="device-status">
+                  <div class="stat-dots"><span class="dot active"></span><span class="dot active"></span></div>
+                  <span class="stat-text">Strong</span>
                 </div>
               </div>
-              <div style="font-size: 1.125rem; font-weight: 600;">System_Image_v2.iso</div>
-              <div style="color: var(--text-dim); font-size: 0.875rem; margin-top: 0.25rem;">4.2 GB / 5.6 GB</div>
+
+              <div class="device-item">
+                <img src="/assets/logo.png" class="device-icon" style="filter: hue-rotate(220deg);">
+                <div class="device-info">
+                  <h4 class="device-name">Vikram's PC</h4>
+                  <p class="device-model">Dik akira</p>
+                </div>
+                <div class="device-status">
+                  <div class="stat-dots"><span class="dot active"></span><span class="dot"></span></div>
+                  <span class="stat-text">OK</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="action-btn secondary"><i data-lucide="qr-code"></i> Scan QR Code</button>
+              <button class="action-btn primary">Pin Code</button>
+            </div>
+            <div class="ip-input-area">
+              <input type="text" placeholder="Enter device IP..." class="ip-input">
+              <button class="connect-btn">Connect</button>
+            </div>
+          </div>
+
+          <!-- Middle Column: Real-Time Transfer -->
+          <div class="panel transfer-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Real-Time Transfer</h3>
             </div>
 
-            <div class="channel-stats">
-              <div class="stat-item">
-                <div class="stat-label">USB Throughput</div>
-                <div class="stat-value cyan" id="usb-speed">480.2 Mbps</div>
+            <div class="transfer-visual-area">
+              <!-- Active Transfer View -->
+              <div class="active-transfer-ui" id="active-transfer-ui">
+                <div class="transfer-target">
+                  <i data-lucide="smartphone" class="target-icon"></i>
+                  <span class="target-name">Ahsh's Samsung</span>
+                  <div class="target-controls">
+                    <i data-lucide="refresh-cw" size="14"></i>
+                    <i data-lucide="maximize-2" size="14"></i>
+                    <i data-lucide="x" size="14"></i>
+                  </div>
+                </div>
+
+                <div class="file-details">
+                  <h4 class="file-name">Vid_2024_clip.mp4</h4>
+                  <p class="file-size">2.18 GB</p>
+                </div>
+
+                <div class="main-progress-container">
+                  <div class="progress-ring-box">
+                    <svg viewBox="0 0 100 100" class="progress-ring">
+                      <circle cx="50" cy="50" r="45" class="ring-bg"></circle>
+                      <circle cx="50" cy="50" r="45" class="ring-fill" id="main-progress-ring"></circle>
+                    </svg>
+                    <div class="progress-center">
+                      <span class="percent-val">76%</span>
+                      <span class="speed-val">87 MB/s</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="multipath-stats">
+                  <div class="stat-bar-group">
+                    <div class="stat-header">
+                      <span>Combined</span>
+                      <div class="visual-bars">
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar"></div>
+                        <div class="vbar"></div>
+                      </div>
+                    </div>
+                    <div class="stat-value">47 MB/s</div>
+                  </div>
+                  <div class="stat-bar-group">
+                    <div class="stat-header">
+                      <i data-lucide="arrow-up" size="12"></i>
+                      <span>40 MB/s</span>
+                      <div class="visual-bars purple">
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar active"></div>
+                        <div class="vbar"></div>
+                        <div class="vbar"></div>
+                        <div class="vbar"></div>
+                        <div class="vbar"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="stat-item">
-                <div class="stat-label">WiFi Throughput</div>
-                <div class="stat-value purple" id="wifi-speed">312.8 Mbps</div>
+
+              <!-- Idle State -->
+              <div class="idle-state-ui" id="idle-state-ui" style="display: none;">
+                <div class="drop-zone">
+                  <i data-lucide="wifi" class="wifi-icon"></i>
+                  <p>Share with WiFi + USB at same time</p>
+                  <button class="select-files-btn">Select Files</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="nav-label" style="margin-bottom: 1.5rem;">Adaptive Chunk Stream</div>
-            <div class="chunk-viewer">
-              <div class="chunk-grid" id="chunk-grid">
-                <!-- Chunks generated via JS -->
+          <!-- Right Column: Queue & Diagnostics -->
+          <div class="panel right-panel">
+            <div class="panel-section">
+              <div class="panel-header">
+                <h3 class="panel-title">Transfer Queue</h3>
+                <div class="queue-header-actions">
+                  <button class="completed-badge">Completed</button>
+                  <i data-lucide="filter" size="16"></i>
+                </div>
+              </div>
+              <div class="tabs">
+                <span class="tab active">Ongoing</span>
+                <span class="tab">Queued</span>
+                <span class="tab">Completed</span>
+                <span class="tab">Failed</span>
+              </div>
+              <div class="queue-content">
+                <div class="empty-drop-area">
+                  <i data-lucide="folder-open" size="48"></i>
+                  <p>Drag & drop files here to send</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-section diagnostics">
+              <div class="panel-header">
+                <h3 class="panel-title">Diagnostics</h3>
+                <i data-lucide="settings" size="16"></i>
+              </div>
+              <div class="diag-tabs">
+                <span class="dtab active">Ongoing</span>
+                <span class="dtab">Queued</span>
+                <span class="dtab">Completed</span>
+                <span class="dtab">Failed</span>
+              </div>
+              <div class="diag-metrics">
+                <div class="diag-row">
+                  <div class="diag-label">
+                    <i data-lucide="usb" size="16"></i>
+                    <span>USB</span>
+                    <small>6 HeeD (9.8 ms)</small>
+                  </div>
+                  <div class="diag-value success">Connected <i data-lucide="check-circle" size="12"></i></div>
+                </div>
+                <div class="diag-row active">
+                  <div class="diag-label">
+                    <i data-lucide="wifi" size="16"></i>
+                    <span>Wi-Fi Latency</span>
+                  </div>
+                  <div class="diag-value">4.5 ms <span class="quality">Excellent Signal</span></div>
+                </div>
+                <div class="diag-row">
+                  <div class="diag-label">
+                    <i data-lucide="cpu" size="16"></i>
+                    <span>Scheduler</span>
+                  </div>
+                  <div class="diag-value">Idle 0/3 Active</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        <aside class="activity-panel">
-          <div class="card" style="flex: 1; display: flex; flex-direction: column;">
-            <div class="nav-label">System Logs</div>
-            <div class="log-console" id="console">
-              <div class="log-entry">
-                <span class="log-time">19:24:02</span>
-                <span>[SCHEDULER] Optimizing multipath routes...</span>
-              </div>
-              <div class="log-entry">
-                <span class="log-time">19:24:01</span>
-                <span>[USB] Handshake verified with ECDH</span>
-              </div>
-              <div class="log-entry">
-                <span class="log-time">19:24:00</span>
-                <span>[CORE] Multipath transfer initiated</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="controls">
-            <button class="btn btn-secondary">
-              <i data-lucide="pause" size="18"></i>
-              <span>PAUSE</span>
-            </button>
-            <button class="btn btn-primary">
-              <i data-lucide="zap" size="18"></i>
-              <span>BOOST</span>
-            </button>
-          </div>
-        </aside>
-      </section>
-
-      <!-- Analytics & Benchmark View -->
-      <section class="dashboard-grid" id="view-analytics" style="display: none; grid-template-columns: 1fr;">
-        <div class="card">
-          <div class="nav-label">Multipath Performance Analysis</div>
-
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
-            <div class="stat-item">
-              <div class="stat-label">Aggregated Peak</div>
-              <div class="stat-value cyan">842.5 Mbps</div>
-              <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">+14% vs single route</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Link Efficiency</div>
-              <div class="stat-value" style="color: #10B981;">98.2%</div>
-              <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">Low jitter detected</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Security Overhead</div>
-              <div class="stat-value purple">1.2ms</div>
-              <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">AES-NI hardware accel</div>
-            </div>
-          </div>
-
-          <div style="margin-top: 2.5rem;">
-            <div class="nav-label">Throughput Delta (USB vs WiFi)</div>
-            <div
-              style="height: 250px; background: rgba(255,255,255,0.01); border: 1px solid var(--glass-border); border-radius: var(--radius-md); margin-top: 1rem; position: relative; overflow: hidden;">
-              <svg width="100%" height="100%" viewBox="0 0 1000 250" preserveAspectRatio="none">
-                <!-- Static Graph for Demo -->
-                <path d="M0 200 Q 150 180, 300 220 T 600 150 T 1000 180 V 250 H 0 Z" fill="rgba(0, 242, 255, 0.1)"
-                  stroke="var(--hybrid-cyan)" stroke-width="2" />
-                <path d="M0 220 Q 200 200, 400 230 T 800 190 T 1000 210 V 250 H 0 Z" fill="rgba(168, 85, 247, 0.1)"
-                  stroke="var(--hybrid-purple)" stroke-width="2" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
+
+    <!-- Bottom Taskbar (Simulated as in image) -->
+    <div class="bottom-taskbar">
+      <div class="tb-left">
+        <i data-lucide="command" size="18"></i>
+        <i data-lucide="search" size="18"></i>
+        <i data-lucide="layout" size="18"></i>
+      </div>
+      <div class="tb-mid">
+        <div class="tb-app active"><img src="/assets/logo.png"></div>
+        <div class="tb-app"><i data-lucide="chrome" size="18"></i></div>
+        <div class="tb-app"><i data-lucide="folder" size="18"></i></div>
+      </div>
+      <div class="tb-right">
+        <i data-lucide="wifi" size="16"></i>
+        <i data-lucide="battery" size="16"></i>
+        <i data-lucide="volume-2" size="16"></i>
+        <span class="tb-time">0:45 AM</span>
+        <i data-lucide="monitor" size="16"></i>
+      </div>
+    </div>
   </div>
 </body>
 
