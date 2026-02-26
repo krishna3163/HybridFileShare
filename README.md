@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/krishna3163/HybridFileShare/main/dashboard/public/logo.svg" width="140" alt="HybridFileShare Logo">
+  <img src="./logo.png" width="140" alt="HybridFileShare Logo">
 </p>
 
 <h1 align="center">HybridFileShare | Multipath Mission Control</h1>
