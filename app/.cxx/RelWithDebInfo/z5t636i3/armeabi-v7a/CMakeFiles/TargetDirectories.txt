@@ -1,0 +1,3 @@
+C:/Users/Admin/Desktop/HybridFileShare/app/.cxx/RelWithDebInfo/z5t636i3/armeabi-v7a/CMakeFiles/native-memory.dir
+C:/Users/Admin/Desktop/HybridFileShare/app/.cxx/RelWithDebInfo/z5t636i3/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Admin/Desktop/HybridFileShare/app/.cxx/RelWithDebInfo/z5t636i3/armeabi-v7a/CMakeFiles/rebuild_cache.dir

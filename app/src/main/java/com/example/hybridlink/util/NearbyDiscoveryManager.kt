@@ -20,7 +20,7 @@ data class DiscoveredDevice(
     val lastSeen: Long = System.currentTimeMillis()
 )
 
-class NearbyDiscoveryManager(context: Context) {
+class NearbyDiscoveryManager(private val context: Context) {
     private val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private val serviceType = "_hybridfileshare._tcp"
     
