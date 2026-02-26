@@ -2,294 +2,376 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HybridFileShare | Multitrack Transfer</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script type="module" src="/main.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HybridFileShare | Dashboard</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
-  <div class="app-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <img src="/assets/logo.png" alt="Logo" style="width: 32px;" id="app-logo">
-      </div>
-      <nav class="sidebar-nav">
-        <div class="nav-item active" data-view="dashboard" title="Dashboard">
-          <i data-lucide="layout-grid"></i>
-          <span>Dashboard</span>
-        </div>
-        <div class="nav-item" data-view="home" title="Live Transfer">
-          <i data-lucide="home"></i>
-          <span>Home</span>
-        </div>
-        <div class="nav-item" data-view="history" title="History">
-          <i data-lucide="history"></i>
-          <span>History</span>
-        </div>
-        <div class="nav-item logout-btn" title="Exit">
-          <i data-lucide="log-out"></i>
-        </div>
-      </nav>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="main-wrapper">
-      <header class="top-header">
-        <div class="brand-section">
-          <h1 class="brand-title">HybridFileShare</h1>
-          <nav class="header-nav">
-            <a href="#" class="active">Dashboard</a>
-            <a href="#">History</a>
-            <a href="#">Settings</a>
-          </nav>
-        </div>
-        <div class="header-actions">
-          <div class="icon-btn"><i data-lucide="refresh-cw" size="18"></i></div>
-          <div class="icon-btn"><i data-lucide="bell" size="18"></i></div>
-          <div class="icon-btn"><i data-lucide="settings" size="18"></i></div>
-          <div class="user-pill">
-            <img src="/assets/logo.png" alt="User" class="avatar">
-            <span class="username">Asish</span>
-            <i data-lucide="chevron-down" size="14"></i>
-          </div>
-          <div class="menu-btn"><i data-lucide="menu"></i></div>
-        </div>
-      </header>
-
-      <div class="content-area">
-        <!-- Hero Section -->
-        <section class="hero-banner">
-          <div class="hero-content">
-            <div class="hero-visual">
-              <div class="logo-glow"></div>
-              <img src="/assets/logo.png" alt="HybridFileShare Logo" class="big-logo">
+    <div class="app-layout">
+        <!-- Vertical Sidebar -->
+        <aside class="sidebar-mini">
+            <div class="mini-logo">
+                <img src="../logo.png" alt="Logo" style="width: 24px;">
             </div>
-            <h2 class="hero-title">HybridFileShare</h2>
-            <p class="hero-subtitle">Share with WiFi + USB at same time</p>
-          </div>
-        </section>
-
-        <!-- Dashboard Grid -->
-        <div class="dashboard-grid">
-          <!-- Left Column: Nearby Devices -->
-          <div class="panel nearby-panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Nearby Devices</h3>
-              <div class="toggle-group">
-                <span class="toggle-label">Receive Mode</span>
-                <div class="toggle-switch active"></div>
-              </div>
-            </div>
-            <div class="device-list" id="discovered-devices">
-              <!-- Discovered devices will be injected here -->
-              <div class="device-item active">
-                <img src="/assets/logo.png" class="device-icon">
-                <div class="device-info">
-                  <h4 class="device-name">Ashish's Samsung</h4>
-                  <p class="device-model">S24 Ultra</p>
+            <nav class="mini-nav">
+                <div class="nav-icon-btn active" title="Dashboard">
+                    <i data-lucide="layout-grid"></i>
+                    <span>Dashboard</span>
                 </div>
-                <div class="device-status">
-                  <div class="stat-dots"><span class="dot active"></span><span class="dot active"></span></div>
-                  <span class="stat-text">Strong</span>
+                <div class="nav-icon-btn" title="History">
+                    <i data-lucide="history"></i>
+                    <span>History</span>
                 </div>
-              </div>
+            </nav>
+        </aside>
 
-              <div class="device-item">
-                <img src="/assets/logo.png" class="device-icon" style="filter: hue-rotate(220deg);">
-                <div class="device-info">
-                  <h4 class="device-name">Vikram's PC</h4>
-                  <p class="device-model">Dik akira</p>
+        <!-- Main Content area -->
+        <div class="main-wrapper">
+            <header class="top-header">
+                <div class="brand-info">
+                    <h1 class="app-name">HybridFileShare</h1>
                 </div>
-                <div class="device-status">
-                  <div class="stat-dots"><span class="dot active"></span><span class="dot"></span></div>
-                  <span class="stat-text">OK</span>
+                <div class="header-actions">
+                    <button class="icon-btn" id="refresh-btn"><i data-lucide="refresh-cw" size="18"></i></button>
+                    <button class="icon-btn"><i data-lucide="bell" size="18"></i></button>
+                    <button class="icon-btn" id="settings-btn-main"><i data-lucide="settings" size="18"></i></button>
                 </div>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="action-btn secondary"><i data-lucide="qr-code"></i> Scan QR Code</button>
-              <button class="action-btn primary">Pin Code</button>
-            </div>
-            <div class="ip-input-area">
-              <input type="text" placeholder="Enter device IP..." class="ip-input">
-              <button class="connect-btn">Connect</button>
-            </div>
-          </div>
+            </header>
 
-          <!-- Middle Column: Real-Time Transfer -->
-          <div class="panel transfer-panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Real-Time Transfer</h3>
-            </div>
-
-            <div class="transfer-visual-area">
-              <!-- Active Transfer View -->
-              <div class="active-transfer-ui" id="active-transfer-ui">
-                <div class="transfer-target">
-                  <i data-lucide="smartphone" class="target-icon"></i>
-                  <span class="target-name">Ahsh's Samsung</span>
-                  <div class="target-controls">
-                    <i data-lucide="refresh-cw" size="14"></i>
-                    <i data-lucide="maximize-2" size="14"></i>
-                    <i data-lucide="x" size="14"></i>
-                  </div>
-                </div>
-
-                <div class="file-details">
-                  <h4 class="file-name">Vid_2024_clip.mp4</h4>
-                  <p class="file-size">2.18 GB</p>
-                </div>
-
-                <div class="main-progress-container">
-                  <div class="progress-ring-box">
-                    <svg viewBox="0 0 100 100" class="progress-ring">
-                      <circle cx="50" cy="50" r="45" class="ring-bg"></circle>
-                      <circle cx="50" cy="50" r="45" class="ring-fill" id="main-progress-ring"></circle>
-                    </svg>
-                    <div class="progress-center">
-                      <span class="percent-val">76%</span>
-                      <span class="speed-val">87 MB/s</span>
+            <div class="content-scroll">
+                <!-- Hero Section with Glowing Logo -->
+                <section class="hero-banner">
+                    <div class="hero-glow"></div>
+                    <div class="hero-content">
+                        <div class="logo-container">
+                            <img src="../logo.png" alt="HybridFileShare" class="hero-logo">
+                        </div>
+                        <h2 class="hero-title">HybridFileShare</h2>
+                        <p class="hero-subtitle">Share with WiFi + USB at same time</p>
                     </div>
-                  </div>
-                </div>
+                </section>
 
-                <div class="multipath-stats">
-                  <div class="stat-bar-group">
-                    <div class="stat-header">
-                      <span>Combined</span>
-                      <div class="visual-bars">
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar"></div>
-                        <div class="vbar"></div>
-                      </div>
+                <!-- 3-Column Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <!-- Left: Nearby Devices -->
+                    <div class="panel nearby-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Nearby Devices</h3>
+                            <div class="toggle-control">
+                                <span>Receive Mode</span>
+                                <div class="switch active"></div>
+                            </div>
+                        </div>
+                        <div class="device-list" id="device-list">
+                            <!-- Populated via main.js -->
+                            <div class="empty-devices">
+                                <i data-lucide="search" class="animate-pulse"></i>
+                                <p>Searching for devices...</p>
+                            </div>
+                        </div>
+                        <div class="panel-footer-actions">
+                            <button id="scan-qr-btn" class="btn secondary"><i data-lucide="qr-code"></i> Scan QR
+                                Code</button>
+                            <button id="pin-code-btn" class="btn secondary">Enter Pin Code</button>
+                        </div>
+                        <div class="manual-input">
+                            <input type="text" placeholder="Enter device IP..." id="manual-ip-input">
+                            <button id="manual-connect-btn">Connect</button>
+                        </div>
                     </div>
-                    <div class="stat-value">47 MB/s</div>
-                  </div>
-                  <div class="stat-bar-group">
-                    <div class="stat-header">
-                      <i data-lucide="arrow-up" size="12"></i>
-                      <span>40 MB/s</span>
-                      <div class="visual-bars purple">
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar active"></div>
-                        <div class="vbar"></div>
-                        <div class="vbar"></div>
-                        <div class="vbar"></div>
-                        <div class="vbar"></div>
-                      </div>
+
+                    <!-- Middle: Real-Time Transfer -->
+                    <div class="panel transfer-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Real-Time Transfer</h3>
+                        </div>
+
+                        <div class="active-transfer-ui" id="metrics-container" style="display: none;">
+                            <div class="transfer-target-header">
+                                <i data-lucide="smartphone" class="target-icon"></i>
+                                <span class="target-name">Ahsh's Samsung</span>
+                                <div class="target-actions">
+                                    <i data-lucide="refresh-cw"></i>
+                                    <i data-lucide="maximize-2"></i>
+                                    <i data-lucide="x"></i>
+                                </div>
+                            </div>
+
+                            <div class="transfer-file-info">
+                                <div class="file-name" id="current-filename">Vid_2024_clip.mp4</div>
+                                <div class="file-size" id="current-filesize">2.18 GB</div>
+                            </div>
+
+                            <div class="progress-ring-section">
+                                <svg viewBox="0 0 100 100" class="progress-ring">
+                                    <circle cx="50" cy="50" r="45" class="ring-track"></circle>
+                                    <circle cx="50" cy="50" r="45" class="ring-fill" id="progress-fill-ring"></circle>
+                                </svg>
+                                <div class="progress-text">
+                                    <div class="percent" id="progress-val">76%</div>
+                                    <div class="speed" id="total-speed-val">87 MB/s</div>
+                                </div>
+                            </div>
+
+                            <div class="channel-bars">
+                                <div class="bar-group">
+                                    <div class="bar-label">Combined <div class="bar-mini-dots"><span
+                                                class="active"></span><span class="active"></span><span
+                                                class="active"></span><span class="active"></span><span></span></div>
+                                    </div>
+                                    <div class="bar-val">47 MB/s</div>
+                                </div>
+                                <div class="bar-group">
+                                    <div class="bar-label"><i data-lucide="arrow-up" size="10"></i> 40 MB/s <div
+                                            class="bar-mini-dots purple"><span class="active"></span><span
+                                                class="active"></span><span class="active"></span><span
+                                                class="active"></span><span></span></div>
+                                    </div>
+                                </div>
+                                <div class="transfer-controls-btn">
+                                    <button class="btn-icon"><i data-lucide="pause"></i></button>
+                                    <button class="btn-icon"><i data-lucide="play"></i></button>
+                                    <button class="btn-icon"><i data-lucide="rotate-ccw"></i></button>
+                                    <button class="btn-primary">Retry</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Idle State -->
+                        <div class="idle-ui" id="dropzone">
+                            <div class="idle-content">
+                                <div class="idle-visual">
+                                    <div class="wifi-wave"></div>
+                                    <i data-lucide="wifi" size="48"></i>
+                                </div>
+                                <h4>Share with WiFi + USB at same time</h4>
+                                <button class="btn primary" id="browse-files-btn">Select Files</button>
+                                <input type="file" id="file-input" multiple style="display:none;" />
+                                <input type="file" id="folder-input" webkitdirectory directory multiple
+                                    style="display:none;" />
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              <!-- Idle State -->
-              <div class="idle-state-ui" id="idle-state-ui" style="display: none;">
-                <div class="drop-zone">
-                  <i data-lucide="wifi" class="wifi-icon"></i>
-                  <p>Share with WiFi + USB at same time</p>
-                  <button class="select-files-btn">Select Files</button>
-                </div>
-              </div>
-            </div>
-          </div>
+                    <!-- Right: Queue & Diagnostics -->
+                    <div class="panel right-panel">
+                        <div class="panel-section queue-section">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Transfer Queue</h3>
+                                <div class="queue-status-btn">Completed <i data-lucide="filter" size="14"></i></div>
+                            </div>
+                            <div class="tabs">
+                                <span class="tab active">Ongoing</span>
+                                <span class="tab">Queued</span>
+                                <span class="tab">Completed</span>
+                                <span class="tab">Failed</span>
+                            </div>
+                            <div class="queue-list" id="queue-list">
+                                <div class="empty-queue">
+                                    <i data-lucide="folder-open" size="40"></i>
+                                    <p>Drag & drop files here to send</p>
+                                </div>
+                            </div>
+                        </div>
 
-          <!-- Right Column: Queue & Diagnostics -->
-          <div class="panel right-panel">
-            <div class="panel-section">
-              <div class="panel-header">
-                <h3 class="panel-title">Transfer Queue</h3>
-                <div class="queue-header-actions">
-                  <button class="completed-badge">Completed</button>
-                  <i data-lucide="filter" size="16"></i>
+                        <div class="panel-section diagnostics-section">
+                            <div class="panel-header">
+                                <h3 class="panel-title">Diagnostics</h3>
+                                <i data-lucide="settings" size="16"></i>
+                            </div>
+                            <div class="tabs mini">
+                                <span class="tab active">Ongoing</span>
+                                <span class="tab">Queued</span>
+                                <span class="tab">Completed</span>
+                                <span class="tab">Failed</span>
+                            </div>
+                            <div class="diag-metrics">
+                                <div class="diag-row">
+                                    <div class="diag-icon-text">
+                                        <i data-lucide="usb"></i>
+                                        <div class="diag-info">
+                                            <div class="diag-label">USB</div>
+                                            <div class="diag-sub">6 Heser (3.8 ms)</div>
+                                        </div>
+                                    </div>
+                                    <div class="diag-status success">Connected <i data-lucide="check-circle"
+                                            size="12"></i></div>
+                                </div>
+                                <div class="diag-row active">
+                                    <div class="diag-icon-text">
+                                        <i data-lucide="wifi"></i>
+                                        <div class="diag-info">
+                                            <div class="diag-label">Wi-Fi Latency</div>
+                                        </div>
+                                    </div>
+                                    <div class="diag-status">4.5 ms <span class="quality">Excellent Signal</span></div>
+                                </div>
+                                <div class="diag-row">
+                                    <div class="diag-icon-text">
+                                        <i data-lucide="cpu"></i>
+                                        <div class="diag-info">
+                                            <div class="diag-label">Scheduler</div>
+                                        </div>
+                                    </div>
+                                    <div class="diag-status text-muted">Idle 0/3 Active</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div class="tabs">
-                <span class="tab active">Ongoing</span>
-                <span class="tab">Queued</span>
-                <span class="tab">Completed</span>
-                <span class="tab">Failed</span>
-              </div>
-              <div class="queue-content">
-                <div class="empty-drop-area">
-                  <i data-lucide="folder-open" size="48"></i>
-                  <p>Drag & drop files here to send</p>
-                </div>
-              </div>
             </div>
 
-            <div class="panel-section diagnostics">
-              <div class="panel-header">
-                <h3 class="panel-title">Diagnostics</h3>
-                <i data-lucide="settings" size="16"></i>
-              </div>
-              <div class="diag-tabs">
-                <span class="dtab active">Ongoing</span>
-                <span class="dtab">Queued</span>
-                <span class="dtab">Completed</span>
-                <span class="dtab">Failed</span>
-              </div>
-              <div class="diag-metrics">
-                <div class="diag-row">
-                  <div class="diag-label">
-                    <i data-lucide="usb" size="16"></i>
-                    <span>USB</span>
-                    <small>6 HeeD (9.8 ms)</small>
-                  </div>
-                  <div class="diag-value success">Connected <i data-lucide="check-circle" size="12"></i></div>
-                </div>
-                <div class="diag-row active">
-                  <div class="diag-label">
-                    <i data-lucide="wifi" size="16"></i>
-                    <span>Wi-Fi Latency</span>
-                  </div>
-                  <div class="diag-value">4.5 ms <span class="quality">Excellent Signal</span></div>
-                </div>
-                <div class="diag-row">
-                  <div class="diag-label">
-                    <i data-lucide="cpu" size="16"></i>
-                    <span>Scheduler</span>
-                  </div>
-                  <div class="diag-value">Idle 0/3 Active</div>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
-      </div>
-    </main>
 
-    <!-- Bottom Taskbar (Simulated as in image) -->
-    <div class="bottom-taskbar">
-      <div class="tb-left">
-        <i data-lucide="command" size="18"></i>
-        <i data-lucide="search" size="18"></i>
-        <i data-lucide="layout" size="18"></i>
-      </div>
-      <div class="tb-mid">
-        <div class="tb-app active"><img src="/assets/logo.png"></div>
-        <div class="tb-app"><i data-lucide="chrome" size="18"></i></div>
-        <div class="tb-app"><i data-lucide="folder" size="18"></i></div>
-      </div>
-      <div class="tb-right">
-        <i data-lucide="wifi" size="16"></i>
-        <i data-lucide="battery" size="16"></i>
-        <i data-lucide="volume-2" size="16"></i>
-        <span class="tb-time">0:45 AM</span>
-        <i data-lucide="monitor" size="16"></i>
-      </div>
+        <!-- Modals for Logic Compatibility -->
+        <div id="connection-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar"><i data-lucide="smartphone" size="32"></i></div>
+                <h2 id="modal-title">Pairing Request</h2>
+                <p id="modal-status" style="color: var(--text-muted); margin-bottom: 2rem;">A temporary session key will
+                    be generated.</p>
+                <div style="display:flex; gap: 1rem;">
+                    <button id="reject-btn" class="btn outline full-width">Reject</button>
+                    <button id="accept-btn" class="btn primary full-width">Accept</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="transfer-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar"><i data-lucide="download" size="32"></i></div>
+                <h2>Incoming File</h2>
+                <p style="color:var(--text-muted); margin-bottom:1rem;"><span id="transfer-req-dev"
+                        style="color:white; font-weight:bold;">Device</span> wants to send files.</p>
+                <div
+                    style="background:rgba(255,255,255,0.05); padding:1rem; border-radius:8px; margin-bottom:1rem; text-align:left;">
+                    <strong id="transfer-req-name">example.zip</strong><br>
+                    <span id="transfer-req-size" style="font-size:0.8rem; color:var(--text-muted);">100 MB</span>
+                </div>
+                <div style="display:flex; gap: 1rem;">
+                    <button id="transfer-reject-btn" class="btn outline full-width">Reject</button>
+                    <button id="transfer-accept-btn" class="btn primary full-width">Accept</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar"><i data-lucide="settings" size="32"></i></div>
+                <h2>Dashboard Settings</h2>
+                <div
+                    style="text-align:left; background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:12px; margin-bottom:1.5rem;">
+                    <label style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
+                        <span>Dark Mode</span>
+                        <div class="switch active" id="setting-darkmode"></div>
+                    </label>
+                    <label style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
+                        <span>Notifications</span>
+                        <div class="switch active" id="setting-notifications"></div>
+                    </label>
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Auto-Accept Transfers</span>
+                        <div class="switch" id="setting-autoaccept"></div>
+                    </label>
+                </div>
+                <button id="close-settings-btn" class="btn primary full-width">Save & Close</button>
+            </div>
+        </div>
+
+        <div id="connection-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card">
+                <div class="modal-avatar"><i data-lucide="smartphone" size="32"></i></div>
+                <h2 id="modal-title">Pairing Request</h2>
+                <p id="modal-status" style="color:var(--text-dim); margin-bottom: 2rem;">A temporary session key will be
+                    generated.</p>
+                <div style="display:flex; gap: 1rem;">
+                    <button id="reject-btn" class="btn outline full-width">Reject</button>
+                    <button id="accept-btn" class="btn primary full-width">Accept</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="qr-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card" style="text-align:center;">
+                <div class="modal-avatar" style="margin-bottom:1rem;"><i data-lucide="qr-code" size="32"></i></div>
+
+                <div class="tabs mini" style="margin-bottom: 1rem;">
+                    <span class="tab active" id="tab-show-qr">Show QR</span>
+                    <span class="tab" id="tab-scan-qr">Scan QR</span>
+                </div>
+
+                <div id="qr-show-view">
+                    <h2>Connect Device</h2>
+                    <p style="color:var(--text-dim); font-size:12px; margin-bottom: 1rem;">Scan this from the HybridLink
+                        App</p>
+                    <div id="qr-container"
+                        style="background:#fff; padding:10px; border-radius:12px; display:inline-block; margin-bottom:1.5rem;">
+                        <img id="qr-image" src="" style="width:200px; height:200px; display:block;">
+                    </div>
+                </div>
+
+                <div id="qr-scan-view" style="display:none;">
+                    <h2>Scan to Connect</h2>
+                    <p style="color:var(--text-dim); font-size:12px; margin-bottom: 1rem;">Point your camera at a
+                        HybridLink QR Code</p>
+                    <div id="qr-reader"
+                        style="width: 100%; max-width: 300px; margin: 0 auto 1.5rem auto; border-radius:12px; overflow:hidden;">
+                    </div>
+                </div>
+
+                <button id="close-qr-btn" class="btn outline full-width">Close</button>
+            </div>
+        </div>
+
+        <div id="pin-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card" style="text-align:center;">
+                <div class="modal-avatar" style="margin-bottom:1rem;"><i data-lucide="key" size="32"></i></div>
+
+                <div class="tabs mini" style="margin-bottom: 1rem;">
+                    <span class="tab active" id="tab-enter-pin">Enter PIN</span>
+                    <span class="tab" id="tab-show-pin">Show PIN</span>
+                </div>
+
+                <div id="pin-enter-view">
+                    <h2>Enter Pair PIN</h2>
+                    <p style="color:var(--text-dim); font-size:12px; margin-bottom: 1.5rem;">Enter the 4-digit PIN
+                        displayed on the other device</p>
+                    <input type="text" id="pin-input" maxlength="4"
+                        style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; text-align:center; font-size:24px; letter-spacing:8px; padding:10px; border-radius:8px; width:120px; outline:none; margin-bottom:1.5rem;">
+                    <div style="display:flex; gap: 1rem;">
+                        <button id="close-pin-btn" class="btn outline full-width">Cancel</button>
+                        <button id="submit-pin-btn" class="btn primary full-width">Connect</button>
+                    </div>
+                </div>
+
+                <div id="pin-show-view" style="display:none;">
+                    <h2>Your Device PIN</h2>
+                    <p style="color:var(--text-dim); font-size:12px; margin-bottom: 1.5rem;">Share this PIN with the
+                        active pairing device</p>
+                    <div id="generated-pin"
+                        style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#22d3ee; text-align:center; font-size:32px; font-weight:bold; letter-spacing:12px; padding:10px; border-radius:8px; width:140px; margin: 0 auto 1.5rem;">
+                        8421</div>
+                    <button id="close-pin-show-btn" class="btn outline full-width">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script type="module" src="./main.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
 </body>
 
 </html>

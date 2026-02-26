@@ -1,0 +1,17 @@
+{
+    "engine_version": "3.0.0-boost",
+    "capabilities": [
+        "multipath",
+        "dual_wifi",
+        "usb_adb_forward",
+        "nio_optimized",
+        "chunk_1mb_buffer"
+    ],
+    "supported_platforms": [
+        "windows",
+        "linux",
+        "android",
+        "web"
+    ],
+    "boost_mode_enabled": true
+}
